@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package yolo_service;
+
+message ImageFrame {
+  bytes image_data = 1;
+  int64 timestamp = 2;
+}
+
+message BoundingBox {
+float x1 = 1;
+  float y1 = 2;
+  float x2 = 3;
+  float y2 = 4;
+  int32 class_id = 5;
+  float confidence = 6;
+}
+
+message PredictionBatch {
+  repeated BoundingBox detections = 1;
+  int64 timestamp = 2;
+}
+
+service YoloService {
+  rpc PredictStream (stream ImageFrame) returns (stream PredictionBatch);
+}
