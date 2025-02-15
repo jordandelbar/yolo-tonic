@@ -9,6 +9,8 @@ use tonic::{Request, Response, Status};
 mod proto {
     tonic::include_proto!("yolo_service");
 }
+use image::{DynamicImage, ImageError};
+use std::io::Cursor;
 
 #[derive(Debug, Default)]
 struct InferenceService {}
@@ -62,6 +64,55 @@ impl YoloService for InferenceService {
         };
 
         Ok(Response::new(Box::pin(output_stream)))
+    }
+
+    async fn predict(
+        &self,
+        request: Request<ImageFrame>,
+    ) -> Result<Response<PredictionBatch>, Status> {
+        let image_frame = request.into_inner();
+        let image_data = image_frame.image_data;
+
+        let image_data_slice = image_data.as_slice();
+
+        let image_reader = image::ImageReader::new(Cursor::new(image_data_slice))
+            .with_guessed_format()
+            .map_err(|e| Status::internal(e.to_string()))?;
+        let image_result: Result<DynamicImage, ImageError> = image_reader.decode();
+
+        match image_result {
+            Ok(_img) => {
+                let detections = vec![
+                    BoundingBox {
+                        x1: 10.0,
+                        y1: 20.0,
+                        x2: 100.0,
+                        y2: 150.0,
+                        class_label: "person".to_string(),
+                        confidence: 0.95,
+                    },
+                    BoundingBox {
+                        x1: 200.0,
+                        y1: 50.0,
+                        x2: 300.0,
+                        y2: 200.0,
+                        class_label: "bicycle".to_string(),
+                        confidence: 0.88,
+                    },
+                ];
+
+                let batch = PredictionBatch {
+                    detections,
+                    timestamp: image_frame.timestamp,
+                };
+
+                Ok(Response::new(batch))
+            }
+            Err(err) => {
+                eprintln!("Error decoding image: {}", err);
+                Err(Status::invalid_argument("Failed to decode image"))
+            }
+        }
     }
 }
 

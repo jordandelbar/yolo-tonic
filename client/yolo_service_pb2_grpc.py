@@ -39,6 +39,11 @@ class YoloServiceStub(object):
                 request_serializer=yolo__service__pb2.ImageFrame.SerializeToString,
                 response_deserializer=yolo__service__pb2.PredictionBatch.FromString,
                 _registered_method=True)
+        self.Predict = channel.unary_unary(
+                '/yolo_service.YoloService/Predict',
+                request_serializer=yolo__service__pb2.ImageFrame.SerializeToString,
+                response_deserializer=yolo__service__pb2.PredictionBatch.FromString,
+                _registered_method=True)
 
 
 class YoloServiceServicer(object):
@@ -50,11 +55,22 @@ class YoloServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def Predict(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_YoloServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
             'PredictStream': grpc.stream_stream_rpc_method_handler(
                     servicer.PredictStream,
+                    request_deserializer=yolo__service__pb2.ImageFrame.FromString,
+                    response_serializer=yolo__service__pb2.PredictionBatch.SerializeToString,
+            ),
+            'Predict': grpc.unary_unary_rpc_method_handler(
+                    servicer.Predict,
                     request_deserializer=yolo__service__pb2.ImageFrame.FromString,
                     response_serializer=yolo__service__pb2.PredictionBatch.SerializeToString,
             ),
@@ -84,6 +100,33 @@ class YoloService(object):
             request_iterator,
             target,
             '/yolo_service.YoloService/PredictStream',
+            yolo__service__pb2.ImageFrame.SerializeToString,
+            yolo__service__pb2.PredictionBatch.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def Predict(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/yolo_service.YoloService/Predict',
             yolo__service__pb2.ImageFrame.SerializeToString,
             yolo__service__pb2.PredictionBatch.FromString,
             options,

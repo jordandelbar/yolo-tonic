@@ -23,4 +23,5 @@ message PredictionBatch {
 
 service YoloService {
   rpc PredictStream (stream ImageFrame) returns (stream PredictionBatch);
+  rpc Predict (ImageFrame) returns (PredictionBatch);
 }

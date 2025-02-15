@@ -1,4 +1,5 @@
 import time
+
 import cv2
 import grpc
 import yolo_service_pb2 as yolo_service
@@ -6,7 +7,7 @@ import yolo_service_pb2_grpc as yolo_service_grpc
 
 from loguru import logger
 
-def predict_every_10_frames(stub):
+def predict_stream(stub):
     cap = cv2.VideoCapture(0)
 
     retries = 10
@@ -21,35 +22,30 @@ def predict_every_10_frames(stub):
         logger.error("unable to initialize camera.")
         return
 
-    last_prediction = None
-    frame_count = 0
-    prediction_interval = 10
+    def frame_generator():
+        while True:
+            ret, frame = cap.read()
+            if not ret or frame is None:
+                logger.warning("failed to capture frame, skipping")
+                time.sleep(0.1)
+                continue
 
-    while True:
-        ret, frame = cap.read()
-        if not ret or frame is None:
-            logger.warning("failed to capture frame, skipping")
-            time.sleep(0.1)
-            continue
-
-        frame_count += 1
-
-        if last_prediction is None or frame_count >= prediction_interval:
             _, encoded_image = cv2.imencode(".jpg", frame)
             image_bytes = encoded_image.tobytes()
 
-            image_frame = yolo_service.ImageFrame(image_data=image_bytes, timestamp=0)
+            image_frame = yolo_service.ImageFrame(image_data=image_bytes, timestamp=int(time.time_ns() / 1e9))
 
-            try:
-                prediction = stub.Predict(image_frame)
-                last_prediction = prediction.detections
-                frame_count = 0
-            except grpc.RpcError as e:
-                logger.error(f"gRPC error: {e}")
-                last_prediction = None
+            yield image_frame
 
-        if last_prediction:
-            for detection in last_prediction:
+    try:
+        predictions = stub.PredictStream(frame_generator())
+        for batch in predictions:
+            ret, frame = cap.read()
+            if not ret or frame is None:
+                logger.warning("failed to capture frame, skipping this batch")
+                continue
+
+            for detection in batch.detections:
                 x1 = int(detection.x1)
                 y1 = int(detection.y1)
                 x2 = int(detection.x2)
@@ -76,16 +72,18 @@ def predict_every_10_frames(stub):
                     lineType=cv2.LINE_AA
                 )
 
-        cv2.imshow("YOLO Predictions", frame)
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
+            cv2.imshow("YOLO Predictions", frame)
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
 
-    cap.release()
-    cv2.destroyAllWindows()
+    finally:
+        cap.release()
+        cv2.destroyAllWindows()
+
 
 
 if __name__ == "__main__":
     server_address = "localhost:50051"
     channel = grpc.insecure_channel(server_address)
     stub = yolo_service_grpc.YoloServiceStub(channel)
-    predict_every_10_frames(stub)
+    predict_stream(stub)
