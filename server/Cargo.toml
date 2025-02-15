@@ -3,6 +3,13 @@ name = "yolo-service"
 version = "0.1.0"
 edition = "2021"
 
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+path = "src/main.rs"
+name = "yolo-service"
+
 [dependencies]
 tonic = "0.12.3"
 tokio = { version = "1", features = ["full"] }
