@@ -12,7 +12,7 @@ float x1 = 1;
   float y1 = 2;
   float x2 = 3;
   float y2 = 4;
-  int32 class_id = 5;
+  string class_label = 5;
   float confidence = 6;
 }
 

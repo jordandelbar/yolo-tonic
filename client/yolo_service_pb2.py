@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x12yolo_service.proto\x12\x0cyolo_service\"3\n\nImageFrame\x12\x12\n\nimage_data\x18\x01 \x01(\x0c\x12\x11\n\ttimestamp\x18\x02 \x01(\x03\"c\n\x0b\x42oundingBox\x12\n\n\x02x1\x18\x01 \x01(\x02\x12\n\n\x02y1\x18\x02 \x01(\x02\x12\n\n\x02x2\x18\x03 \x01(\x02\x12\n\n\x02y2\x18\x04 \x01(\x02\x12\x10\n\x08\x63lass_id\x18\x05 \x01(\x05\x12\x12\n\nconfidence\x18\x06 \x01(\x02\"S\n\x0fPredictionBatch\x12-\n\ndetections\x18\x01 \x03(\x0b\x32\x19.yolo_service.BoundingBox\x12\x11\n\ttimestamp\x18\x02 \x01(\x03\x32[\n\x0bYoloService\x12L\n\rPredictStream\x12\x18.yolo_service.ImageFrame\x1a\x1d.yolo_service.PredictionBatch(\x01\x30\x01\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x12yolo_service.proto\x12\x0cyolo_service\"3\n\nImageFrame\x12\x12\n\nimage_data\x18\x01 \x01(\x0c\x12\x11\n\ttimestamp\x18\x02 \x01(\x03\"f\n\x0b\x42oundingBox\x12\n\n\x02x1\x18\x01 \x01(\x02\x12\n\n\x02y1\x18\x02 \x01(\x02\x12\n\n\x02x2\x18\x03 \x01(\x02\x12\n\n\x02y2\x18\x04 \x01(\x02\x12\x13\n\x0b\x63lass_label\x18\x05 \x01(\t\x12\x12\n\nconfidence\x18\x06 \x01(\x02\"S\n\x0fPredictionBatch\x12-\n\ndetections\x18\x01 \x03(\x0b\x32\x19.yolo_service.BoundingBox\x12\x11\n\ttimestamp\x18\x02 \x01(\x03\x32[\n\x0bYoloService\x12L\n\rPredictStream\x12\x18.yolo_service.ImageFrame\x1a\x1d.yolo_service.PredictionBatch(\x01\x30\x01\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -34,9 +34,9 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_IMAGEFRAME']._serialized_start=36
   _globals['_IMAGEFRAME']._serialized_end=87
   _globals['_BOUNDINGBOX']._serialized_start=89
-  _globals['_BOUNDINGBOX']._serialized_end=188
-  _globals['_PREDICTIONBATCH']._serialized_start=190
-  _globals['_PREDICTIONBATCH']._serialized_end=273
-  _globals['_YOLOSERVICE']._serialized_start=275
-  _globals['_YOLOSERVICE']._serialized_end=366
+  _globals['_BOUNDINGBOX']._serialized_end=191
+  _globals['_PREDICTIONBATCH']._serialized_start=193
+  _globals['_PREDICTIONBATCH']._serialized_end=276
+  _globals['_YOLOSERVICE']._serialized_start=278
+  _globals['_YOLOSERVICE']._serialized_end=369
 # @@protoc_insertion_point(module_scope)

@@ -7,4 +7,5 @@ dependencies = [
     "grpcio-tools>=1.70.0",
     "grpcio>=1.70.0",
     "opencv-python>=4.11.0.86",
+    "loguru>=0.7.3",
 ]
