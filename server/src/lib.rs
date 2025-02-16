@@ -13,6 +13,7 @@ mod proto {
     tonic::include_proto!("yolo_service");
 }
 pub use app::App;
+pub use model_service::OrtModelService;
 
 #[async_trait]
 pub trait ModelService: Send + Sync + Clone + 'static {
