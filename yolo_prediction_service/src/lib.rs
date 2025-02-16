@@ -4,5 +4,4 @@ mod model_service;
 mod ort_service;
 mod proto;
 
-pub use app::App;
-pub use ort_service::OrtModelService;
+pub use app::start_app;

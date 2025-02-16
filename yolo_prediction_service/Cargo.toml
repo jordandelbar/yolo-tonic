@@ -11,7 +11,7 @@ path = "src/main.rs"
 name = "yolo-prediction-service"
 
 [dependencies]
-ort = { version = "2.0.0-rc.9", features = ["ndarray"] }
+ort = { version = "2.0.0-rc.9", features = ["ndarray", "cuda"] }
 tonic = "0.12.3"
 tokio = { version = "1", features = ["full"] }
 prost = "0.13.3"
@@ -19,6 +19,8 @@ futures = "0.3.31"
 async-stream = "0.3"
 image = "0.25"
 ndarray = "0.16.1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["json", "env-filter"] }
 
 [build-dependencies]
 tonic-build = "0.12.3"

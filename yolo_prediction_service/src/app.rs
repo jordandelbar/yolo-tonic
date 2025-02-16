@@ -1,5 +1,5 @@
 use crate::{
-    inference_service::InferenceService, model_service::ModelService,
+    inference_service::InferenceService, model_service::ModelService, ort_service::OrtModelService,
     proto::yolo_service_server::YoloServiceServer,
 };
 use tonic::transport::Server;
@@ -30,4 +30,18 @@ impl<M: ModelService> App<M> {
 
         Ok(())
     }
+}
+
+pub async fn start_app() -> Result<(), Box<dyn std::error::Error>> {
+    let model_path = "./models/yolov8m.onnx";
+    let ort_model_service =
+        OrtModelService::new(model_path, 5).expect(&format!("no model found at {}", model_path));
+
+    let addr = "[::1]:50051";
+    let mut app = App::new(ort_model_service, addr);
+    tracing::info!("listening on {}", addr);
+
+    app.run().await?;
+
+    Ok(())
 }
