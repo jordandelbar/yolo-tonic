@@ -1,11 +1,8 @@
 mod app;
 mod model_service;
 
-use async_stream::stream;
-use futures::Stream;
 use proto::yolo_service_server::{YoloService, YoloServiceServer};
 use proto::{BoundingBox, ImageFrame, PredictionBatch};
-use std::pin::Pin;
 use std::sync::Arc;
 use tonic::async_trait;
 use tonic::{Request, Response, Status};
@@ -35,39 +32,6 @@ impl<M: ModelService> InferenceService<M> {
 
 #[async_trait]
 impl<M: ModelService> YoloService for InferenceService<M> {
-    type PredictStreamStream = Pin<Box<dyn Stream<Item = Result<PredictionBatch, Status>> + Send>>;
-
-    async fn predict_stream(
-        &self,
-        request: Request<tonic::Streaming<ImageFrame>>,
-    ) -> Result<Response<Self::PredictStreamStream>, Status> {
-        let mut stream = request.into_inner();
-        let model_service = self.model_service.clone();
-
-        let output_stream = stream! {
-            // Move the value of the cloned Arc into the stream
-            let model_service = model_service;
-            while let Some(frame) = stream.message().await.transpose() {
-                let model_service = model_service.clone();
-                match frame {
-                    Ok(image_frame) => {
-                        let prediction_result = model_service.predict(image_frame).await;
-                        match prediction_result {
-                            Ok(batch) => yield Ok(batch),
-                            Err(status) => yield Err(status),
-                        }
-                    }
-                    Err(status) => {
-                        yield Err(status);
-                        break
-                    }
-                }
-            }
-        };
-
-        Ok(Response::new(Box::pin(output_stream)))
-    }
-
     async fn predict(
         &self,
         request: Request<ImageFrame>,
