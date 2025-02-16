@@ -1,4 +1,7 @@
-use crate::{InferenceService, ModelService, YoloServiceServer};
+use crate::{
+    inference_service::InferenceService, model_service::ModelService,
+    proto::yolo_service_server::YoloServiceServer,
+};
 use tonic::transport::Server;
 
 pub struct App<M: ModelService> {
@@ -16,7 +19,7 @@ impl<M: ModelService> App<M> {
     }
 
     pub async fn run(&mut self) -> Result<(), Box<dyn std::error::Error>> {
-        let addr = self.addr.parse().unwrap();
+        let addr = self.addr.parse().expect("failed to parse address");
 
         println!("Inference service listening on {}", self.addr);
 
