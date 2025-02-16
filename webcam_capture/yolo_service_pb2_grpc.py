@@ -2,7 +2,6 @@
 """Client and server classes corresponding to protobuf-defined services."""
 
 import grpc
-import warnings
 
 import yolo_service_pb2 as yolo__service__pb2
 
@@ -22,7 +21,7 @@ except ImportError:
 if _version_not_supported:
     raise RuntimeError(
         f"The grpc package installed is at version {GRPC_VERSION},"
-        + f" but the generated code in yolo_service_pb2_grpc.py depends on"
+        + " but the generated code in yolo_service_pb2_grpc.py depends on"
         + f" grpcio>={GRPC_GENERATED_VERSION}."
         + f" Please upgrade your grpc module to grpcio>={GRPC_GENERATED_VERSION}"
         + f" or downgrade your generated code using grpcio-tools<={GRPC_VERSION}."
@@ -38,12 +37,6 @@ class YoloServiceStub(object):
         Args:
             channel: A grpc.Channel.
         """
-        self.PredictStream = channel.stream_stream(
-            "/yolo_service.YoloService/PredictStream",
-            request_serializer=yolo__service__pb2.ImageFrame.SerializeToString,
-            response_deserializer=yolo__service__pb2.PredictionBatch.FromString,
-            _registered_method=True,
-        )
         self.Predict = channel.unary_unary(
             "/yolo_service.YoloService/Predict",
             request_serializer=yolo__service__pb2.ImageFrame.SerializeToString,
@@ -55,12 +48,6 @@ class YoloServiceStub(object):
 class YoloServiceServicer(object):
     """Missing associated documentation comment in .proto file."""
 
-    def PredictStream(self, request_iterator, context):
-        """Missing associated documentation comment in .proto file."""
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details("Method not implemented!")
-        raise NotImplementedError("Method not implemented!")
-
     def Predict(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
@@ -70,11 +57,6 @@ class YoloServiceServicer(object):
 
 def add_YoloServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
-        "PredictStream": grpc.stream_stream_rpc_method_handler(
-            servicer.PredictStream,
-            request_deserializer=yolo__service__pb2.ImageFrame.FromString,
-            response_serializer=yolo__service__pb2.PredictionBatch.SerializeToString,
-        ),
         "Predict": grpc.unary_unary_rpc_method_handler(
             servicer.Predict,
             request_deserializer=yolo__service__pb2.ImageFrame.FromString,
@@ -93,36 +75,6 @@ def add_YoloServiceServicer_to_server(servicer, server):
 # This class is part of an EXPERIMENTAL API.
 class YoloService(object):
     """Missing associated documentation comment in .proto file."""
-
-    @staticmethod
-    def PredictStream(
-        request_iterator,
-        target,
-        options=(),
-        channel_credentials=None,
-        call_credentials=None,
-        insecure=False,
-        compression=None,
-        wait_for_ready=None,
-        timeout=None,
-        metadata=None,
-    ):
-        return grpc.experimental.stream_stream(
-            request_iterator,
-            target,
-            "/yolo_service.YoloService/PredictStream",
-            yolo__service__pb2.ImageFrame.SerializeToString,
-            yolo__service__pb2.PredictionBatch.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata,
-            _registered_method=True,
-        )
 
     @staticmethod
     def Predict(

@@ -1,4 +1,4 @@
-use yolo_service::{App, OrtModelService};
+use yolo_prediction_service::{App, OrtModelService};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {

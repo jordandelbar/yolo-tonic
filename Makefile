@@ -4,7 +4,7 @@ download-model:
 	bash scripts/model_download.sh
 
 run-server:
-	@cd server && cargo run
+	@cd yolo_prediction_service && cargo run
 
 run-client:
-	@cd client && uv run python main.py
+	@cd webcam_capture && uv run python main.py

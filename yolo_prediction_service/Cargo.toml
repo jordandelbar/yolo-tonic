@@ -1,5 +1,5 @@
 [package]
-name = "yolo-service"
+name = "yolo-prediction-service"
 version = "0.1.0"
 edition = "2021"
 
@@ -8,7 +8,7 @@ path = "src/lib.rs"
 
 [[bin]]
 path = "src/main.rs"
-name = "yolo-service"
+name = "yolo-prediction-service"
 
 [dependencies]
 ort = { version = "2.0.0-rc.9", features = ["ndarray"] }
