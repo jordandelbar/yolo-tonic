@@ -2,7 +2,10 @@ use crate::ModelService;
 use crate::{BoundingBox, ImageFrame, PredictionBatch};
 use image::{imageops::FilterType, GenericImageView};
 use ndarray::{s, Array, Axis, Ix4};
-use ort::session::{Session, SessionOutputs};
+use ort::{
+    execution_providers::CUDAExecutionProvider,
+    session::{Session, SessionOutputs},
+};
 use std::sync::{
     atomic::{AtomicUsize, Ordering},
     Arc,
@@ -65,6 +68,9 @@ pub struct OrtModelService {
 
 impl OrtModelService {
     pub fn new(model_path: &str, num_instances: usize) -> Result<Self, Box<dyn std::error::Error>> {
+        ort::init()
+            .with_execution_providers([CUDAExecutionProvider::default().build()])
+            .commit()?;
         let sessions = (0..num_instances)
             .map(|_| {
                 let session = Session::builder()?.commit_from_file(model_path)?;
@@ -126,7 +132,7 @@ impl ModelService for OrtModelService {
                 .reduce(|accum, row| if row.1 > accum.1 { row } else { accum })
                 .unwrap();
 
-            if prob < 0.5 {
+            if prob < 0.55 {
                 continue;
             }
 
