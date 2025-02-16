@@ -198,3 +198,7 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# Models
+*.pt
+*.onnx
