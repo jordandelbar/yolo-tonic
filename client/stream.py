@@ -7,6 +7,7 @@ import yolo_service_pb2_grpc as yolo_service_grpc
 
 from loguru import logger
 
+
 def predict_stream(stub):
     cap = cv2.VideoCapture(0)
 
@@ -33,7 +34,9 @@ def predict_stream(stub):
             _, encoded_image = cv2.imencode(".jpg", frame)
             image_bytes = encoded_image.tobytes()
 
-            image_frame = yolo_service.ImageFrame(image_data=image_bytes, timestamp=int(time.time_ns() / 1e9))
+            image_frame = yolo_service.ImageFrame(
+                image_data=image_bytes, timestamp=int(time.time_ns() / 1e9)
+            )
 
             yield image_frame
 
@@ -59,7 +62,7 @@ def predict_stream(stub):
                     0.6,
                     (0, 255, 0),
                     2,
-                    lineType=cv2.LINE_AA
+                    lineType=cv2.LINE_AA,
                 )
                 cv2.putText(
                     frame,
@@ -69,17 +72,16 @@ def predict_stream(stub):
                     0.5,
                     (0, 255, 0),
                     1,
-                    lineType=cv2.LINE_AA
+                    lineType=cv2.LINE_AA,
                 )
 
             cv2.imshow("YOLO Predictions", frame)
-            if cv2.waitKey(1) & 0xFF == ord('q'):
+            if cv2.waitKey(1) & 0xFF == ord("q"):
                 break
 
     finally:
         cap.release()
         cv2.destroyAllWindows()
-
 
 
 if __name__ == "__main__":

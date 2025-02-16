@@ -9,3 +9,8 @@ dependencies = [
     "opencv-python>=4.11.0.86",
     "loguru>=0.7.3",
 ]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.9.6",
+]

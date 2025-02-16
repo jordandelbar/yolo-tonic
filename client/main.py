@@ -16,6 +16,7 @@ server_address = "localhost:50051"
 channel = grpc.insecure_channel(server_address)
 stub = yolo_service_grpc.YoloServiceStub(channel)
 
+
 def send_prediction_request():
     global last_prediction
     while True:
@@ -29,7 +30,9 @@ def send_prediction_request():
         try:
             _, encoded_image = cv2.imencode(".jpg", frame_copy)
             image_bytes = encoded_image.tobytes()
-            image_frame = yolo_service.ImageFrame(image_data=image_bytes, timestamp=int(time.time() * 1000))
+            image_frame = yolo_service.ImageFrame(
+                image_data=image_bytes, timestamp=int(time.time() * 1000)
+            )
 
             prediction = stub.Predict(image_frame)
 
@@ -40,6 +43,7 @@ def send_prediction_request():
             logger.error(f"gRPC error: {e}")
         except Exception as e:
             logger.error(f"Prediction request error: {e}")
+
 
 def display_thread():
     global latest_frame
@@ -72,15 +76,33 @@ def display_thread():
 
         if current_prediction:
             for detection in current_prediction:
-                x1, y1, x2, y2 = map(int, [detection.x1, detection.y1, detection.x2, detection.y2])
+                x1, y1, x2, y2 = map(
+                    int, [detection.x1, detection.y1, detection.x2, detection.y2]
+                )
                 class_label, confidence = detection.class_label, detection.confidence
 
                 cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
-                cv2.putText(frame, str(class_label), (x1, max(20, y1 - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
-                cv2.putText(frame, f"{confidence:.2f}", (x1, min(frame.shape[0] - 10, y2 + 20)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
+                cv2.putText(
+                    frame,
+                    str(class_label),
+                    (x1, max(20, y1 - 10)),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.6,
+                    (0, 255, 0),
+                    2,
+                )
+                cv2.putText(
+                    frame,
+                    f"{confidence:.2f}",
+                    (x1, min(frame.shape[0] - 10, y2 + 20)),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.5,
+                    (0, 255, 0),
+                    1,
+                )
 
         cv2.imshow("YOLO Predictions", frame)
-        if cv2.waitKey(1) & 0xFF == ord('q'):
+        if cv2.waitKey(1) & 0xFF == ord("q"):
             break
 
     cap.release()
