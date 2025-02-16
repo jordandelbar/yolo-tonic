@@ -1,4 +1,5 @@
 mod app;
+mod model_service;
 
 use async_stream::stream;
 use futures::Stream;
