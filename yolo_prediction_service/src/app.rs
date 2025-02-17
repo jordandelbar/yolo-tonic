@@ -37,7 +37,9 @@ pub async fn start_app() -> Result<(), Box<dyn std::error::Error>> {
     let ort_model_service =
         OrtModelService::new(model_path, 5).expect(&format!("no model found at {}", model_path));
 
-    let addr = "[::1]:50051";
+    // TODO: config for local dev vs docker
+    // let addr = "[::1]:50051";
+    let addr = "0.0.0.0:50051";
     let mut app = App::new(ort_model_service, addr);
     tracing::info!("listening on {}", addr);
 
