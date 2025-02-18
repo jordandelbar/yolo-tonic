@@ -2,11 +2,11 @@
 
 download-model:
 	bash scripts/model_download/run.sh
-	mv yolov8m.onnx yolo_prediction_service/models
+	mv yolov8m.onnx yolo_prediction/models
 	rm yolov8m.pt
 
 run-server:
-	@cd yolo_prediction_service && cargo run
+	@cd yolo_prediction && cargo run
 
 run-client:
 	@cd webcam_capture && uv run python main.py
