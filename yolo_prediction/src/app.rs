@@ -1,6 +1,6 @@
 use crate::{
-    inference_service::InferenceService, model_service::ModelService, ort_service::OrtModelService,
-    proto::yolo_service_server::YoloServiceServer,
+    config::get_configuration, inference_service::InferenceService, model_service::ModelService,
+    ort_service::OrtModelService, proto::yolo_service_server::YoloServiceServer,
 };
 use tonic::transport::Server;
 
@@ -33,14 +33,14 @@ impl<M: ModelService> App<M> {
 }
 
 pub async fn start_app() -> Result<(), Box<dyn std::error::Error>> {
-    let model_path = "./models/yolov8m.onnx";
+    let config = get_configuration().expect("failed to load config");
     let ort_model_service =
-        OrtModelService::new(model_path, 5).expect(&format!("no model found at {}", model_path));
+        OrtModelService::new(&config).expect("failed to instantiate ort model service");
 
     // TODO: config for local dev vs docker
     // let addr = "[::1]:50051";
     let addr = "0.0.0.0:50051";
-    let mut app = App::new(ort_model_service, addr);
+    let mut app = App::new(ort_model_service, &config.service.get_address());
     tracing::info!("listening on {}", addr);
 
     app.run().await?;

@@ -1,3 +1,4 @@
+use crate::config::Settings;
 use crate::model_service::ModelService;
 use crate::proto::{BoundingBox, ImageFrame, PredictionBatch};
 use image::{imageops::FilterType, GenericImageView};
@@ -67,13 +68,15 @@ pub struct OrtModelService {
 }
 
 impl OrtModelService {
-    pub fn new(model_path: &str, num_instances: usize) -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn new(settings: &Settings) -> Result<Self, Box<dyn std::error::Error>> {
         ort::init()
             .with_execution_providers([CUDAExecutionProvider::default().build()])
             .commit()?;
+        let num_instances = settings.model.num_instances;
         let sessions = (0..num_instances)
             .map(|_| {
-                let session = Session::builder()?.commit_from_file(model_path)?;
+                let session =
+                    Session::builder()?.commit_from_file(&settings.model.get_model_path())?;
                 Ok(Arc::new(session))
             })
             .collect::<Result<Vec<_>, ort::Error>>()?;
@@ -90,7 +93,7 @@ impl OrtModelService {
         let index = self.counter.fetch_add(1, Ordering::SeqCst) % self.sessions.len();
         let session = &self.sessions[index];
 
-        tracing::info!("handling request with session {}", index);
+        tracing::debug!("handling request with session {}", index);
 
         let input_tensor = ort::inputs![input.view()]
             .map_err(|e| Status::internal(format!("failed to create input tensor: {}", e)))?;

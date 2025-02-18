@@ -1,4 +1,5 @@
 mod app;
+mod config;
 mod inference_service;
 mod model_service;
 mod ort_service;

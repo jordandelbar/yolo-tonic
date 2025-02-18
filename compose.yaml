@@ -12,3 +12,8 @@ services:
       context: ./yolo_prediction
     ports:
       - "50051:50051"
+    environment:
+      APP_ENVIRONMENT: "production"
+      APP_MODEL__ONNX_FILE: "yolov8m.onnx"
+      APP_MODEL__NUM_INSTANCES: "5"
+      APP_MODEL__MODEL_DIR: "/app/models"

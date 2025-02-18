@@ -12,15 +12,17 @@ name = "yolo-prediction-service"
 
 [dependencies]
 ort = { version = "2.0.0-rc.9", features = ["ndarray", "cuda"] }
-tonic = "0.12.3"
+tonic = "0.12"
 tokio = { version = "1", features = ["full"] }
-prost = "0.13.3"
-futures = "0.3.31"
+prost = "0.13"
+futures = "0.3"
 async-stream = "0.3"
 image = "0.25"
-ndarray = "0.16.1"
+ndarray = "0.16"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["json", "env-filter"] }
+serde = { version = "1", features = ["derive"] }
+config = { version = "0.15", default-features = false, features = ["yaml"] }
 
 [build-dependencies]
-tonic-build = "0.12.3"
+tonic-build = "0.12"

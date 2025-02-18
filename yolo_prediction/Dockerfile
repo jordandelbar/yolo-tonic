@@ -28,6 +28,7 @@ RUN apt-get update -y \
 COPY --from=builder /app/onnxruntime/lib/* /usr/lib/
 
 COPY --from=builder /app/target/release/yolo-prediction-service /app/yolo-prediction-service
+COPY --from=builde /app/configuration/ /app/configuration
 COPY ./models/yolov8m.onnx /app/models/yolov8m.onnx
 
 EXPOSE 50051
