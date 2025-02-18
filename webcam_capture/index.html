@@ -1,0 +1,42 @@
+<!doctype html>
+<html>
+    <head>
+        <title>Video Stream</title>
+        <style>
+            body {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                min-height: 100vh;
+                margin: 0;
+            }
+
+            #video-stream {
+                max-width: 90%;
+                max-height: 90%;
+                width: auto;
+                height: auto;
+            }
+        </style>
+    </head>
+    <body>
+        <img
+            id="video-stream"
+            src="http://localhost:8000/video_feed"
+            alt="Video Stream"
+        />
+
+        <script>
+            const img = document.getElementById("video-stream");
+
+            img.addEventListener("error", (event) => {
+                console.error("Error loading video stream:", event);
+                img.src = "";
+            });
+
+            img.onload = () => {
+                console.log("Video stream loaded successfully.");
+            };
+        </script>
+    </body>
+</html>
