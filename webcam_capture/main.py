@@ -18,7 +18,7 @@ latest_frame = None
 frame_lock = threading.Lock()
 
 # TODO: environment variable
-server_address = "localhost:50051"
+server_address = "yolo_prediction_service:50051"
 channel = grpc.insecure_channel(server_address)
 stub = yolo_service_grpc.YoloServiceStub(channel)
 

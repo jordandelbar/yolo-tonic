@@ -1,0 +1,14 @@
+services:
+  webcam_capture_service:
+    build:
+      context: ./webcam_capture
+    ports:
+      - "8000:8000"
+    devices:
+      - /dev/video0:/dev/video0
+
+  yolo_prediction_service:
+    build:
+      context: ./yolo_prediction
+    ports:
+      - "50051:50051"
