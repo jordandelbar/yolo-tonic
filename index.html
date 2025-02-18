@@ -1,42 +1,89 @@
 <!doctype html>
-<html>
+<html lang="en">
     <head>
-        <title>Video Stream</title>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>YOLO Prediction Live</title>
         <style>
+            * {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+                font-family: Arial, sans-serif;
+            }
+
             body {
                 display: flex;
                 justify-content: center;
                 align-items: center;
                 min-height: 100vh;
-                margin: 0;
+                background: #f0f0f0;
+                color: #333;
+                text-align: center;
+            }
+
+            .container {
+                background: #fff;
+                padding: 20px;
+                border-radius: 8px;
+                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+                max-width: 90%;
+            }
+
+            h1 {
+                font-size: 1.6em;
+                margin-bottom: 12px;
+                color: #444;
             }
 
             #video-stream {
-                max-width: 90%;
-                max-height: 90%;
+                max-width: 100%;
+                max-height: 75vh;
                 width: auto;
                 height: auto;
+                border-radius: 5px;
+                border: 1px solid #ddd;
+                display: none;
+            }
+
+            .message {
+                font-size: 1em;
+                margin-top: 10px;
+                color: #666;
+            }
+
+            .error {
+                color: #cc0000;
             }
         </style>
     </head>
     <body>
-        <img
-            id="video-stream"
-            src="http://localhost:8000/video_feed"
-            alt="Video Stream"
-        />
+        <div class="container">
+            <h1>YOLO Prediction Live</h1>
+            <p class="message" id="status-message">Loading video stream...</p>
+            <img
+                id="video-stream"
+                src="http://localhost:8000/video_feed"
+                alt="YOLO Video Stream"
+            />
+        </div>
 
         <script>
             const img = document.getElementById("video-stream");
-
-            img.addEventListener("error", (event) => {
-                console.error("Error loading video stream:", event);
-                img.src = "";
-            });
+            const statusMessage = document.getElementById("status-message");
 
             img.onload = () => {
-                console.log("Video stream loaded successfully.");
+                statusMessage.style.display = "none";
+                img.style.display = "block";
+                console.log("YOLO stream is live.");
             };
+
+            img.addEventListener("error", () => {
+                console.error("Error loading YOLO stream.");
+                statusMessage.textContent =
+                    "Error: Unable to load video stream.";
+                statusMessage.classList.add("error");
+            });
         </script>
     </body>
 </html>
