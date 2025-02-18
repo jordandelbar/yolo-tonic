@@ -33,11 +33,15 @@ jobs:
             ghcr.io/${{ github.repository }}/yolo-tonic-webcam-capture:latest
             ghcr.io/${{ github.repository }}/yolo-tonic-webcam-capture:${{ github.sha }}
 
+      - name: Download Yolo model
+        run: |
+          make download-model
+
       - name: Build Yolo Prediction service image
         uses: docker/build-push-action@v6
         with:
           context: ./yolo_prediction
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}/yolo-tonic-webcam-capture:latest
-            ghcr.io/${{ github.repository }}/yolo-tonic-webcam-capture:${{ github.sha }}
+            ghcr.io/${{ github.repository }}/yolo-tonic-yolo-prediction:latest
+            ghcr.io/${{ github.repository }}/yolo-tonic-yolo-prediction:${{ github.sha }}
