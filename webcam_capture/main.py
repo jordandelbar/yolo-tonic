@@ -4,6 +4,7 @@ import grpc
 import threading
 
 from loguru import logger
+
 import yolo_service_pb2 as yolo_service
 import yolo_service_pb2_grpc as yolo_service_grpc
 
@@ -12,6 +13,7 @@ last_prediction_lock = threading.Lock()
 latest_frame = None
 frame_lock = threading.Lock()
 
+# TODO: environment variable
 server_address = "localhost:50051"
 channel = grpc.insecure_channel(server_address)
 stub = yolo_service_grpc.YoloServiceStub(channel)
@@ -101,7 +103,7 @@ def display_thread():
                     1,
                 )
 
-        cv2.imshow("YOLO Predictions", frame)
+        logger.info(frame)
         if cv2.waitKey(1) & 0xFF == ord("q"):
             break
 
