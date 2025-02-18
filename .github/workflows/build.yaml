@@ -30,8 +30,8 @@ jobs:
           context: ./webcam_capture
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}/yolo-tonic-webcam-capture:latest
-            ghcr.io/${{ github.repository }}/yolo-tonic-webcam-capture:${{ github.sha }}
+            ghcr.io/${{ github.repository }}/webcam-capture:latest
+            ghcr.io/${{ github.repository }}/webcam-capture:${{ github.sha }}
 
       - name: Download Yolo model
         run: |
@@ -43,5 +43,5 @@ jobs:
           context: ./yolo_prediction
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}/yolo-tonic-yolo-prediction:latest
-            ghcr.io/${{ github.repository }}/yolo-tonic-yolo-prediction:${{ github.sha }}
+            ghcr.io/${{ github.repository }}/yolo-prediction:latest
+            ghcr.io/${{ github.repository }}/yolo-prediction:${{ github.sha }}
