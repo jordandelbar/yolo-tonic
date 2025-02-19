@@ -1,4 +1,3 @@
-import os
 import time
 import cv2
 import grpc
@@ -21,8 +20,7 @@ last_prediction_lock = threading.Lock()
 latest_frame = None
 frame_lock = threading.Lock()
 
-# TODO: environment variable
-channel = grpc.insecure_channel(cfg.get_app_address)
+channel = grpc.insecure_channel(cfg.get_yolo_service_address)
 stub = yolo_service_grpc.YoloServiceStub(channel)
 
 cap = cv2.VideoCapture(0)
@@ -49,9 +47,10 @@ def send_prediction_request(stop_prediction_request):
         try:
             _, encoded_image = cv2.imencode(".jpg", frame_copy)
             image_bytes = encoded_image.tobytes()
-            image_frame = yolo_service.ImageFrame(
-                image_data=image_bytes, timestamp=int(time.time() * 1000)
-            )
+
+            image_frame = yolo_service.ImageFrame()  # pyright: ignore
+            image_frame.image_data = image_bytes
+            image_frame.timestamp = int(time.time() * 1000)
 
             prediction = stub.Predict(image_frame)
 
