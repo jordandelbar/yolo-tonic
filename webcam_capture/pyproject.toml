@@ -10,6 +10,7 @@ dependencies = [
     "loguru>=0.7.3",
     "fastapi>=0.115.8",
     "uvicorn>=0.34.0",
+    "pyyaml>=6.0.2",
 ]
 
 [dependency-groups]

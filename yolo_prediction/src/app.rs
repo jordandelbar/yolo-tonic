@@ -21,7 +21,7 @@ impl<M: ModelService> App<M> {
     pub async fn run(&mut self) -> Result<(), Box<dyn std::error::Error>> {
         let addr = self.addr.parse().expect("failed to parse address");
 
-        println!("Inference service listening on {}", self.addr);
+        tracing::info!("Inference service listening on {}", self.addr);
 
         Server::builder()
             .add_service(YoloServiceServer::new(self.inference_service.clone()))

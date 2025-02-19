@@ -1,0 +1,7 @@
+{
+  "logger": {
+    "level": "INFO",
+    "format_production": "{time:YYYY-MM-DD HH:mm:ss.SSS}, {level}, {name}:{function}, {message}, {extra}",
+    "format_local": "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<magenta>{function}</magenta> | {message} | {extra}"
+  }
+}
