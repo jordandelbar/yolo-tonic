@@ -1,13 +1,15 @@
 services:
   webcam_capture_service:
-    image: ghcr.io/jordandelbar/yolo-tonic/webcam-capture:latest
+    build:
+      context: ./webcam_capture
     ports:
       - "8000:8000"
     devices:
       - /dev/video0:/dev/video0
 
   yolo_prediction_service:
-    image: ghcr.io/jordandelbar/yolo-tonic/yolo-prediction:latest
+    build:
+      context: ./yolo_prediction
     ports:
       - "50051:50051"
     environment:

@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main
+    paths:
+      - "webcam_capture/**"
+      - "yolo_prediction/**"
 
 permissions:
   packages: write
@@ -32,6 +35,20 @@ jobs:
           tags: |
             ghcr.io/${{ github.repository }}/webcam-capture:latest
             ghcr.io/${{ github.repository }}/webcam-capture:${{ github.sha }}
+
+      - name: Cache YOLO Model
+        uses: actions/cache@v3
+        with:
+          path: ./yolo_prediction/models
+          key: yolo-model-${{ runner.os }}-${{ hashFiles('Makefile') }}
+          restore-keys: |
+            yolo-model-${{ runner.os }}-
+
+      - name: Download YOLO Model if missing
+        run: |
+          if [ ! -f "./yolo_prediction/models/yolov8m.onnx" ]; then
+            make download-model
+          fi
 
       - name: Download Yolo model
         run: |
