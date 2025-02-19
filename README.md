@@ -7,6 +7,8 @@ for inference, and a FastAPI-based middleware that streams video from a webcam o
 collects predictions, and serves them via an API.
 A simple HTML page is available to visualize the detections live.
 
+![Alt text](./docs/images/sophie.png)
+
 ## 🛠️ Tech Stack
 
   - Rust ([Tonic], [Ort]) for running YOLO model inference via gRPC using [ONNX] runtime
