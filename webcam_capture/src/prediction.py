@@ -15,15 +15,23 @@ logger = logging.getLogger(__name__)
 class PredictionManager:
     def __init__(self, camera):
         self.camera = camera
-        self.channel = grpc.insecure_channel(cfg.get_yolo_service_address)
-        self.stub = yolo_service_grpc.YoloServiceStub(self.channel)
+        self.channel = None
+        self.stub = None
         self.last_prediction = None
         self.last_prediction_lock = asyncio.Lock()
         self.stop_event = asyncio.Event()
         self.task = None
+        self._running = False
 
-    def start(self):
+    async def start(self):
+        if self._running:
+            return
+        self._running = True
+        self.stop_event.clear()
+        self.channel = grpc.insecure_channel(cfg.get_yolo_service_address)
+        self.stub = yolo_service_grpc.YoloServiceStub(self.channel)
         self.task = asyncio.create_task(self._prediction_loop())
+        logger.info("prediction manager started")
 
     async def _prediction_loop(self):
         while not self.stop_event.is_set():
@@ -42,7 +50,7 @@ class PredictionManager:
                 image_frame.image_data = image_bytes
                 image_frame.timestamp = int(time.time() * 1000)
 
-                prediction = await asyncio.to_thread(self.stub.Predict, image_frame)
+                prediction = await asyncio.to_thread(self.stub.Predict, image_frame) # pyright: ignore
                 async with self.last_prediction_lock:
                     self.last_prediction = prediction.detections
 
@@ -52,12 +60,20 @@ class PredictionManager:
                 logger.error(f"Prediction request error: {e}")
 
     async def predict(self, frame):
+        if not self._running:
+            return None
         async with self.last_prediction_lock:
             return self.last_prediction
 
     async def stop(self):
+        if not self._running:
+            return
+
+        self._running = False
         self.stop_event.set()
-        self.channel.close()
+
+        if self.channel:
+            self.channel.close()
         if self.task:
             try:
                 await asyncio.wait_for(self.task, timeout=5.0)
@@ -73,7 +89,12 @@ class PredictionManager:
             except asyncio.CancelledError:
                 pass
             finally:
-                self.channel.close()
+                if self.channel:
+                    self.channel.close()
+                self.channel = None
+                self.stub = None
+                self.task = None
+        logger.info("prediction manager stopped")
 
     async def join(self):
         if self.task:

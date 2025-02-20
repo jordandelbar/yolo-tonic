@@ -22,29 +22,39 @@ logger = CustomizeLogger.make_logger(config_path, cfg.environment)
 camera = Camera()
 prediction_manager = PredictionManager(camera)
 
+active_clients = set()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await camera.initialize()
-    prediction_manager.start()
     yield
     await camera.release()
-    await prediction_manager.stop()
-    await prediction_manager.join()
-
 
 app = FastAPI(title="Yolo webcam capture", lifespan=lifespan, debug=False)
 
 
 @app.get("/video_feed")
 async def video_feed(request: Request):
-    logger.info("client connected, starting stream")
-    return StreamingResponse(
-        generate_frames(request), media_type="multipart/x-mixed-replace; boundary=frame"
-    )
+    client_id = id(request)
+    logger.info(f"client {client_id} connected, starting stream")
+
+    if not active_clients:
+        await prediction_manager.start()
+    active_clients.add(client_id)
+
+    try:
+        return StreamingResponse(
+            generate_frames(request, client_id), media_type="multipart/x-mixed-replace; boundary=frame"
+        )
+    except Exception as e:
+        logger.error(f"error in video feed: {e}")
+        active_clients.discard(client_id)
+        if not active_clients:
+            await prediction_manager.stop()
+        raise
 
 
-async def generate_frames(request: Request):
+async def generate_frames(request: Request, client_id: int):
     try:
         async for frame in camera.frames():
             if await request.is_disconnected():
@@ -90,10 +100,8 @@ async def generate_frames(request: Request):
                 b"Content-Type: image/jpeg\r\n\r\n" + frame_bytes + b"\r\n"
             )
             await asyncio.sleep(0.033)
-    except Exception as e:
-        logger.error(f"error in generate frame: {e}")
     finally:
-        if await request.is_disconnected():
-            logger.info("client disconnected, stopping stream")
-            return
-        logger.info("stopping stream and restarting for new client")
+        active_clients.discard(client_id)
+        if not active_clients:
+            await prediction_manager.stop()
+        logger.info(f"client {client_id} stream ended")
