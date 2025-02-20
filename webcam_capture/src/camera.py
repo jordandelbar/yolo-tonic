@@ -25,7 +25,7 @@ class Camera:
             exit(1)
 
     async def frames(self):
-        while True:
+        while self.cap is not None and True:
             ret, frame = self.cap.read()
             if not ret or frame is None:
                 logger.warning("failed to capture frame, skipping")

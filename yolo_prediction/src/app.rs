@@ -3,6 +3,7 @@ use crate::{
     ort_service::OrtModelService, proto::yolo_service_server::YoloServiceServer,
 };
 use tonic::transport::Server;
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 pub struct App<M: ModelService> {
     inference_service: InferenceService<M>,
@@ -34,6 +35,24 @@ impl<M: ModelService> App<M> {
 
 pub async fn start_app() -> Result<(), Box<dyn std::error::Error>> {
     let config = get_configuration().expect("failed to load config");
+
+    let log_level = config.log_level.as_str();
+    let log_level = &format!("{},ort=info", log_level);
+    tracing_subscriber::registry()
+        .with(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| log_level.into()),
+        )
+        .with(
+            tracing_subscriber::fmt::layer()
+                .json()
+                .with_target(false)
+                .with_level(true)
+                .with_thread_names(true)
+                .with_thread_ids(true),
+        )
+        .init();
+
     let ort_model_service =
         OrtModelService::new(&config).expect("failed to instantiate ort model service");
 

@@ -5,6 +5,16 @@ use std::path::PathBuf;
 pub struct Settings {
     pub service: ServiceSettings,
     pub model: ModelSettings,
+    #[serde(deserialize_with = "deserialize_log_level")]
+    pub log_level: LogLevel,
+}
+
+fn deserialize_log_level<'de, D>(deserializer: D) -> Result<LogLevel, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let s = String::deserialize(deserializer)?;
+    s.try_into().map_err(serde::de::Error::custom)
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -46,38 +56,7 @@ impl ModelSettings {
     }
 }
 
-pub fn get_configuration() -> Result<Settings, config::ConfigError> {
-    let base_path = std::env::current_dir().expect("Failed to determine the current directory");
-    let configuration_directory = base_path.join("configuration");
-
-    let environment: Environment = std::env::var("APP_ENVIRONMENT")
-        .unwrap_or_else(|_| "local".into())
-        .try_into()
-        .expect("Failed to parse APP_ENVIRONMENT.");
-    let settings = config::Config::builder()
-        .add_source(config::File::from(
-            configuration_directory.join("base.yaml"),
-        ))
-        .add_source(config::File::from(
-            configuration_directory.join(format!("{}.yaml", environment.as_str())),
-        ))
-        .add_source(
-            config::Environment::with_prefix("APP")
-                .prefix_separator("_")
-                .separator("__"),
-        )
-        .build()?;
-
-    let settings = settings.try_deserialize::<Settings>()?;
-    println!("{:?}", settings);
-    if let Err(e) = settings.model.validate() {
-        tracing::error!("Configuration validation failed: {}", e);
-        return Err(config::ConfigError::Message(e));
-    }
-
-    Ok(settings)
-}
-
+#[derive(Debug, Deserialize, Clone)]
 pub enum Environment {
     Local,
     Production,
@@ -105,4 +84,66 @@ impl TryFrom<String> for Environment {
             )),
         }
     }
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub enum LogLevel {
+    Debug,
+    Info,
+}
+
+impl LogLevel {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            LogLevel::Debug => "debug",
+            LogLevel::Info => "info",
+        }
+    }
+}
+impl TryFrom<String> for LogLevel {
+    type Error = String;
+
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        match s.to_lowercase().as_str() {
+            "debug" => Ok(Self::Debug),
+            "info" => Ok(Self::Info),
+            other => Err(format!(
+                "{} is not a supported minimum log level. Use either `debug` or `info`.",
+                other
+            )),
+        }
+    }
+}
+
+pub fn get_configuration() -> Result<Settings, config::ConfigError> {
+    let base_path = std::env::current_dir().expect("Failed to determine the current directory");
+    let configuration_directory = base_path.join("configuration");
+
+    let environment: Environment = std::env::var("APP_ENVIRONMENT")
+        .unwrap_or_else(|_| "local".into())
+        .try_into()
+        .expect("Failed to parse APP_ENVIRONMENT");
+
+    let settings = config::Config::builder()
+        .add_source(config::File::from(
+            configuration_directory.join("base.yaml"),
+        ))
+        .add_source(config::File::from(
+            configuration_directory.join(format!("{}.yaml", environment.as_str())),
+        ))
+        .add_source(
+            config::Environment::with_prefix("APP")
+                .prefix_separator("_")
+                .separator("__"),
+        )
+        .build()?;
+
+    let settings: Settings = settings.try_deserialize::<Settings>()?;
+
+    if let Err(e) = settings.model.validate() {
+        tracing::error!("Configuration validation failed: {}", e);
+        return Err(config::ConfigError::Message(e));
+    }
+
+    Ok(settings)
 }
