@@ -58,7 +58,7 @@ pub async fn start_service() -> Result<(), Box<dyn std::error::Error>> {
         OrtModelService::new(&config).expect("failed to instantiate ort model service");
 
     let addr = config.service.get_address();
-    let mut app = App::new(ort_model_service, &addr);
+    let mut app = Service::new(ort_model_service, &addr);
     tracing::info!("listening on {}", &addr);
 
     app.run().await?;
