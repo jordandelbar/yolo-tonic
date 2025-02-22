@@ -7,6 +7,7 @@ on:
     paths:
       - "webcam_capture/**"
       - "yolo_prediction/**"
+      - "Dockerfile"
 
 permissions:
   packages: write
@@ -15,6 +16,17 @@ permissions:
 jobs:
   build-and-push-image:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [webcam-capture, yolo-prediction]
+        dockerfile: [Dockerfile]
+        include:
+          - service: webcam-capture
+            context: .
+            tag: webcam-capture
+          - service: yolo-prediction
+            context: .
+            tag: yolo-prediction
 
     steps:
       - name: Checkout code
@@ -27,16 +39,8 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.REGISTRY_TOKEN }}
 
-      - name: Build Webcam Capture service image
-        uses: docker/build-push-action@v6
-        with:
-          context: ./webcam_capture
-          push: true
-          tags: |
-            ghcr.io/${{ github.repository }}/webcam-capture:latest
-            ghcr.io/${{ github.repository }}/webcam-capture:${{ github.sha }}
-
       - name: Cache YOLO Model
+        if: matrix.service == "yolo-prediction"
         uses: actions/cache@v3
         with:
           path: ./yolo_prediction/models
@@ -45,20 +49,18 @@ jobs:
             yolo-model-${{ runner.os }}-
 
       - name: Download YOLO Model if missing
+        if: matrix.service == "yolo-prediction"
         run: |
           if [ ! -f "./yolo_prediction/models/yolov8m.onnx" ]; then
             make download-model
           fi
 
-      - name: Download Yolo model
-        run: |
-          make download-model
-
-      - name: Build Yolo Prediction service image
+      - name: Build and push ${{ matrix.service }} image
         uses: docker/build-push-action@v6
         with:
-          context: ./yolo_prediction
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}/yolo-prediction:latest
-            ghcr.io/${{ github.repository }}/yolo-prediction:${{ github.sha }}
+            ghcr.io/${{ github.repository }}/${{ matrix.tag }}:latest
+            ghcr.io/${{ github.repository }}/${{ matrix.tag }}:${{ github.sha }}
