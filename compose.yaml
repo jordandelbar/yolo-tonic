@@ -3,6 +3,8 @@ services:
     image: ghcr.io/jordandelbar/yolo-tonic/webcam-capture:latest
     ports:
       - "8000:8000"
+    environment:
+      APP_ENVIRONMENT: "production"
     devices:
       - /dev/video0:/dev/video0
 

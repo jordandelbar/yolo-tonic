@@ -4,6 +4,8 @@ services:
       context: ./webcam_capture
     ports:
       - "8000:8000"
+    environment:
+      APP_ENVIRONMENT: "production"
     devices:
       - /dev/video0:/dev/video0
 

@@ -3,7 +3,7 @@
 
 import grpc
 
-import yolo_service_pb2 as yolo__service__pb2
+import src.yolo_service_pb2 as yolo__service__pb2
 
 GRPC_GENERATED_VERSION = "1.70.0"
 GRPC_VERSION = grpc.__version__

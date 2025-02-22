@@ -10,7 +10,10 @@ local-run-server:
 	@cd yolo_prediction && cargo run
 
 local-run-client:
-	@cd webcam_capture && uv run python main.py
+	@cd webcam_capture && uv run uvicorn src.main:app --reload
+
+local-services-build:
+	@docker compose -f compose.local.yaml build
 
 local-services-up:
 	@docker compose -f compose.local.yaml up -d

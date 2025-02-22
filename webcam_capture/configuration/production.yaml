@@ -1,0 +1,2 @@
+yolo_service_host: yolo_prediction_service
+app_host: 0.0.0.0

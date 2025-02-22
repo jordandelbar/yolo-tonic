@@ -1,0 +1,50 @@
+name: Audit
+
+on:
+  push:
+    paths:
+      - yolo_prediction/**
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    env:
+      working-directory: ./yolo_prediction
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          components: rustfmt, clippy
+
+      - name: Install Protobuff dependencies
+        run: |
+          apt-get update -y \
+          && apt-get install -y --no-install-recommends protobuf-compiler libprotobuf-dev
+
+      - name: Cache Cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Run cargo fmt
+        working-directory: ${{ env.working-directory }}
+        run: cargo fmt --all -- --check
+
+      - name: Run cargo check
+        working-directory: ${{ env.working-directory }}
+        run: cargo check
+
+      - name: Run cargo clippy
+        working-directory: ${{ env.working-directory }}
+        run: cargo clippy -- -D warnings
+
+      - name: Run cargo test
+        working-directory: ${{ env.working-directory }}
+        run: cargo test
