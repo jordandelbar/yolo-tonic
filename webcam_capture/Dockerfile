@@ -16,7 +16,7 @@ FROM debian:bookworm-slim
 WORKDIR /app
 
 RUN apt-get update -y \
-    && apt-get install -y --no-install-recommends protobuf-compiler libprotobuf-dev libgomp1 libopencv-dev llvm clang libclang-dev \
+    && apt-get install -y --no-install-recommends protobuf-compiler libprotobuf-dev libgomp1 libopencv-dev \
     && apt-get autoremove -y \
     && apt-get clean -y \
     && rm -rf /var/lib/apt/lists/*
@@ -24,6 +24,6 @@ RUN apt-get update -y \
 COPY --from=builder /app/webcam_capture/target/release/webcam_capture /app/webcam_capture
 COPY --from=builder /app/webcam_capture/configuration/ /app/configuration
 
-EXPOSE 50051
+EXPOSE 8000
 
 CMD ["./webcam_capture"]

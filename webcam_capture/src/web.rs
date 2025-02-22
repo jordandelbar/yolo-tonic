@@ -21,6 +21,7 @@ pub async fn start_app(config: Settings) -> Result<(), Box<dyn Error>> {
         .into_make_service();
 
     let addr = config.app.get_address();
+    tracing::info!("starting app on {}", &addr);
     let listener = TcpListener::bind(&addr).await?;
     axum::serve(listener, app).await?;
 
