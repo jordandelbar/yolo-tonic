@@ -1,16 +1,17 @@
 use crate::{
     config::get_configuration, inference_service::InferenceService, model_service::ModelService,
-    ort_service::OrtModelService, proto::yolo_service_server::YoloServiceServer,
+    ort_service::OrtModelService,
 };
 use tonic::transport::Server;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+use yolo_proto::yolo_service_server::YoloServiceServer;
 
-pub struct App<M: ModelService> {
+pub struct Service<M: ModelService> {
     inference_service: InferenceService<M>,
     addr: String,
 }
 
-impl<M: ModelService> App<M> {
+impl<M: ModelService> Service<M> {
     pub fn new(model_service: M, addr: &str) -> Self {
         let inference_service = InferenceService::new(model_service);
         Self {
@@ -33,7 +34,7 @@ impl<M: ModelService> App<M> {
     }
 }
 
-pub async fn start_app() -> Result<(), Box<dyn std::error::Error>> {
+pub async fn start_service() -> Result<(), Box<dyn std::error::Error>> {
     let config = get_configuration().expect("failed to load config");
 
     let log_level = config.log_level.as_str();

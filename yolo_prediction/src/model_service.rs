@@ -1,5 +1,5 @@
-use crate::proto::{ImageFrame, PredictionBatch};
 use tonic::{async_trait, Status};
+use yolo_proto::{ImageFrame, PredictionBatch};
 
 #[async_trait]
 pub trait ModelService: Send + Sync + Clone + 'static {

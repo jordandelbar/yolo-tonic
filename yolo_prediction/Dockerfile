@@ -11,8 +11,10 @@ RUN curl -L -o onnxruntime.tgz "https://github.com/microsoft/onnxruntime/release
     && tar -xzf onnxruntime.tgz --strip-components=1 -C /app/onnxruntime \
     && rm onnxruntime.tgz
 
-COPY . .
+COPY ./yolo_prediction /app/yolo_prediction
+COPY ./yolo_proto /app/yolo_proto
 
+WORKDIR /app/yolo_prediction
 RUN cargo build --release
 
 FROM debian:bookworm-slim
@@ -27,10 +29,10 @@ RUN apt-get update -y \
 
 COPY --from=builder /app/onnxruntime/lib/* /usr/lib/
 
-COPY --from=builder /app/target/release/yolo-prediction-service /app/yolo-prediction-service
-COPY --from=builder /app/configuration/ /app/configuration
-COPY ./models/yolov8m.onnx /app/models/yolov8m.onnx
+COPY --from=builder /app/yolo_prediction/target/release/yolo_prediction /app/yolo_prediction
+COPY --from=builder /app/yolo_prediction/configuration/ /app/configuration
+COPY --from=builder /app/yolo_prediction/models/yolov8m.onnx /app/models/yolov8m.onnx
 
 EXPOSE 50051
 
-CMD ["./yolo-prediction-service"]
+CMD ["./yolo_prediction"]

@@ -1,2 +1,5 @@
-yolo_service_host: yolo_prediction_service
-app_host: 0.0.0.0
+app:
+  host: 0.0.0.0
+prediction_service:
+  host: yolo_prediction_service
+log_level: info

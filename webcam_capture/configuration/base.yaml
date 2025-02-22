@@ -1,2 +1,4 @@
-yolo_service_port: 50051
-app_port: 8000
+app:
+  port: 8000
+prediction_service:
+  port: 50051

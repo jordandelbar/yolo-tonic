@@ -1,7 +1,8 @@
 services:
-  webcam_capture_service:
+  webcam_capture_app:
     build:
-      context: ./webcam_capture
+      context: .
+      dockerfile: ./webcam_capture/Dockerfile
     ports:
       - "8000:8000"
     environment:
@@ -11,7 +12,8 @@ services:
 
   yolo_prediction_service:
     build:
-      context: ./yolo_prediction
+      context: .
+      dockerfile: ./yolo_prediction/Dockerfile
     ports:
       - "50051:50051"
     environment:

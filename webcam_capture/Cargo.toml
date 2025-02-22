@@ -1,5 +1,5 @@
 [package]
-name = "yolo_prediction"
+name = "webcam_capture"
 version = "0.1.0"
 edition = "2021"
 
@@ -8,18 +8,18 @@ path = "src/lib.rs"
 
 [[bin]]
 path = "src/main.rs"
-name = "yolo_prediction"
+name = "webcam_capture"
 
 [dependencies]
 yolo_proto = { path = "../yolo_proto" }
-ort = { version = "2.0.0-rc.9", features = ["ndarray", "cuda"] }
-tonic = "0.12"
 tokio = { version = "1", features = ["full"] }
+axum = "0.8"
+opencv = "0.94"
 futures = "0.3"
-async-stream = "0.3"
-image = "0.25"
-ndarray = "0.16"
+anyhow = "1"
+bytes = "1"
+tonic = "0.12"
+config = { version = "0.15", default-features = false, features = ["yaml"] }
+serde = { version = "1", features = ["derive"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["json", "env-filter"] }
-serde = { version = "1", features = ["derive"] }
-config = { version = "0.15", default-features = false, features = ["yaml"] }

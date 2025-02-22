@@ -1,0 +1,13 @@
+/**/target/
+docs/
+scripts/
+.vscode/
+.idea/
+.zed/
+.env
+.git/
+
+*.swp
+*.bak
+*.tmp
+*.md

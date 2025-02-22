@@ -1,8 +1,7 @@
-mod app;
 mod config;
 mod inference_service;
 mod model_service;
 mod ort_service;
-mod proto;
+mod service;
 
-pub use app::start_app;
+pub use service::start_service;

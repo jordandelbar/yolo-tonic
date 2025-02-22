@@ -1,6 +1,6 @@
 use crate::model_service::ModelService;
-use crate::proto::yolo_service_server::YoloService;
-use crate::proto::{ImageFrame, PredictionBatch};
+use yolo_proto::yolo_service_server::YoloService;
+use yolo_proto::{ImageFrame, PredictionBatch};
 
 use std::sync::Arc;
 use tonic::{async_trait, Request, Response, Status};
@@ -35,7 +35,7 @@ impl<M: ModelService> YoloService for InferenceService<M> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::proto::BoundingBox;
+    use yolo_proto::BoundingBox;
 
     #[derive(Clone)]
     struct MockModelService {}

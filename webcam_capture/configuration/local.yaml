@@ -1,2 +1,5 @@
-yolo_service_host: 127.0.0.1
-app_host: 127.0.0.1
+app:
+  host: 127.0.0.1
+prediction_service:
+  host: 127.0.0.1
+log_level: debug

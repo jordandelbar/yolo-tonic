@@ -1,6 +1,5 @@
 use crate::config::Settings;
 use crate::model_service::ModelService;
-use crate::proto::{BoundingBox, ImageFrame, PredictionBatch};
 use image::{imageops::FilterType, GenericImageView};
 use ndarray::{s, Array, Axis, Ix4};
 use ort::{
@@ -12,6 +11,7 @@ use std::sync::{
     Arc,
 };
 use tonic::{async_trait, Status};
+use yolo_proto::{BoundingBox, ImageFrame, PredictionBatch};
 
 #[rustfmt::skip]
 const YOLOV8_CLASS_LABELS: [&str; 80] = [
