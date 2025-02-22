@@ -8,6 +8,7 @@ on:
       - "webcam_capture/**"
       - "yolo_prediction/**"
       - "Dockerfile"
+  workflow_dispatch:
 
 permissions:
   packages: write
@@ -18,14 +19,13 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        service: [webcam-capture, yolo-prediction]
-        dockerfile: [Dockerfile]
+        service: [webcam_capture, yolo_prediction]
         include:
-          - service: webcam-capture
-            context: .
+          - service: webcam_capture
+            dockerfile: webcam_capture/Dockerfile
             tag: webcam-capture
-          - service: yolo-prediction
-            context: .
+          - service: yolo_prediction
+            dockerfile: yolo_prediction/Dockerfile
             tag: yolo-prediction
 
     steps:
@@ -40,7 +40,7 @@ jobs:
           password: ${{ secrets.REGISTRY_TOKEN }}
 
       - name: Cache YOLO Model
-        if: matrix.service == "yolo-prediction"
+        if: matrix.service == 'yolo-prediction'
         uses: actions/cache@v3
         with:
           path: ./yolo_prediction/models
@@ -49,7 +49,7 @@ jobs:
             yolo-model-${{ runner.os }}-
 
       - name: Download YOLO Model if missing
-        if: matrix.service == "yolo-prediction"
+        if: matrix.service == 'yolo-prediction'
         run: |
           if [ ! -f "./yolo_prediction/models/yolov8m.onnx" ]; then
             make download-model
