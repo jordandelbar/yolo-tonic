@@ -1,6 +1,19 @@
-use yolo_prediction::start_service;
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+use yolo_prediction::{config, start_service};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    start_service().await
+    let config = config::get_configuration().expect("failed to load config");
+
+    let log_level = config.log_level.as_str();
+    let log_level = &format!("{},ort=info", log_level);
+    tracing_subscriber::registry()
+        .with(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| log_level.into()),
+        )
+        .with(tracing_subscriber::fmt::layer().json().with_level(true))
+        .init();
+
+    start_service(config).await
 }

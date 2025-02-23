@@ -23,3 +23,4 @@ config = { version = "0.15", default-features = false, features = ["yaml"] }
 serde = { version = "1", features = ["derive"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["json", "env-filter"] }
+thiserror = "2"

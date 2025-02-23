@@ -1,6 +1,25 @@
 use opencv::{core, core::Mat, imgcodecs, imgproc, prelude::*, videoio};
+use thiserror::Error;
 use tokio::sync::Mutex;
 use yolo_proto::BoundingBox;
+
+#[derive(Error, Debug)]
+pub enum CameraError {
+    #[error("Failed to open camera: {0}")]
+    OpenCameraFailed(opencv::Error),
+    #[error("Failed to read frame: {0}")]
+    ReadFrameFailed(opencv::Error),
+    #[error("Failed to encode frame: {0}")]
+    EncodeFrameFailed(opencv::Error),
+    #[error("OpenCV error: {0}")]
+    OpenCvError(opencv::Error),
+}
+
+impl From<opencv::Error> for CameraError {
+    fn from(err: opencv::Error) -> Self {
+        CameraError::OpenCvError(err)
+    }
+}
 
 #[derive(Debug)]
 pub struct Camera {
@@ -9,18 +28,26 @@ pub struct Camera {
 }
 
 impl Camera {
-    pub async fn new() -> Self {
-        let capture = videoio::VideoCapture::new(0, videoio::CAP_ANY).unwrap();
-        Self {
+    pub async fn new() -> Result<Self, CameraError> {
+        let capture = videoio::VideoCapture::new(0, videoio::CAP_ANY)
+            .map_err(CameraError::OpenCameraFailed)?;
+        Ok(Self {
             capture: Mutex::new(capture),
             predictions: Mutex::new(vec![]),
-        }
+        })
     }
 
-    pub async fn get_frame(&self) -> Option<Vec<u8>> {
+    pub async fn capture_frame(&self) -> Result<Mat, CameraError> {
         let mut cam = self.capture.lock().await;
         let mut frame = Mat::default();
-        if cam.read(&mut frame).unwrap() && !frame.empty() {
+        cam.read(&mut frame).map_err(CameraError::ReadFrameFailed)?;
+        Ok(frame)
+    }
+
+    pub async fn get_annotated_frame(&self) -> Result<Option<Vec<u8>>, CameraError> {
+        let mut cam = self.capture.lock().await;
+        let mut frame = Mat::default();
+        if cam.read(&mut frame).map_err(CameraError::ReadFrameFailed)? && !frame.empty() {
             let predictions = self.predictions.lock().await;
             for bbox in predictions.iter() {
                 let x1 = bbox.x1 as i32;
@@ -37,7 +64,7 @@ impl Camera {
                     imgproc::LINE_8,
                     0,
                 )
-                .unwrap();
+                .map_err(CameraError::from)?;
 
                 imgproc::put_text(
                     &mut frame,
@@ -50,12 +77,13 @@ impl Camera {
                     imgproc::LINE_AA,
                     false,
                 )
-                .unwrap();
+                .map_err(CameraError::from)?;
             }
             let mut buf = opencv::core::Vector::<u8>::new();
-            imgcodecs::imencode(".jpg", &frame, &mut buf, &opencv::core::Vector::new()).ok()?;
-            return Some(buf.into());
+            imgcodecs::imencode(".jpg", &frame, &mut buf, &opencv::core::Vector::new())
+                .map_err(CameraError::EncodeFrameFailed)?;
+            return Ok(Some(buf.into()));
         }
-        None
+        Ok(None)
     }
 }

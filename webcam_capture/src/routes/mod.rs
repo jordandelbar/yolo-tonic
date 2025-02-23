@@ -1,4 +1,5 @@
 use crate::camera::Camera;
+use crate::camera::CameraError;
 use axum::{
     body::Body,
     extract::State,
@@ -18,21 +19,30 @@ pub async fn video_stream(State(camera): State<Arc<Camera>>) -> impl IntoRespons
 
     let stream = stream::unfold(camera, move |camera| async move {
         sleep(Duration::from_millis(20)).await;
-        if let Some(frame) = camera.get_frame().await {
-            let part_header = format!(
-                "--{}\r\nContent-Type: image/jpeg\r\nContent-Length: {}\r\n\r\n",
-                boundary,
-                frame.len()
-            );
-            let mut body = part_header.into_bytes();
-            body.extend_from_slice(&frame);
+        match camera.get_annotated_frame().await {
+            Ok(Some(frame)) => {
+                let part_header = format!(
+                    "--{}\r\nContent-Type: image/jpeg\r\nContent-Length: {}\r\n\r\n",
+                    boundary,
+                    frame.len()
+                );
+                let mut body = part_header.into_bytes();
+                body.extend_from_slice(&frame);
 
-            Some((Ok::<_, String>(Bytes::from(body)), camera))
-        } else {
-            None
+                Some((Ok::<_, CameraError>(Bytes::from(body)), camera))
+            }
+            Ok(None) => None,
+            Err(e) => {
+                tracing::error!("Error getting frame: {:?}", e);
+                Some((Err(e), camera))
+            }
         }
     });
-    let stream = stream.map_err(|e| anyhow::Error::msg(e));
+
+    let stream = stream.map_err(|e| {
+        tracing::error!("Stream error: {:?}", e);
+        anyhow::Error::msg(e.to_string())
+    });
 
     let body = Body::from_stream(stream);
 

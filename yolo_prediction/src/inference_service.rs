@@ -1,6 +1,5 @@
 use crate::model_service::ModelService;
-use yolo_proto::yolo_service_server::YoloService;
-use yolo_proto::{ImageFrame, PredictionBatch};
+use yolo_proto::{yolo_service_server::YoloService, ImageFrame, PredictionBatch};
 
 use std::sync::Arc;
 use tonic::{async_trait, Request, Response, Status};
