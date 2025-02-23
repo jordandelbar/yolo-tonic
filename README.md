@@ -1,4 +1,4 @@
-# YOLO Object Detection with Tonic and FastAPI
+# YOLO Object Detection with Tonic and Axum
 
 ## 📝 Overview
 
@@ -11,8 +11,8 @@ A simple HTML page is available to visualize the detections live from a webcam.
 
 ## 🛠️ Tech Stack
 
-  - Rust ([Tonic], [Ort]) for running YOLO model inference via gRPC using [ONNX] runtime
-  - Rust ([Axum], [Tonic]) for handling video streaming and client Http requests
+  - [Tonic], [Ort] for running YOLO model inference via gRPC using [ONNX] runtime
+  - [Axum], [Tonic] for handling video streaming and client Http requests
   - [OpenCV] for processing video frames in the middleware
   - HTML + JavaScript for real-time visualization
 
