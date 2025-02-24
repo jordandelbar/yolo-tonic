@@ -81,7 +81,7 @@ impl OrtModelService {
             })
             .collect::<Result<Vec<_>, ort::Error>>()?;
 
-        tracing::info!("created {} ONNX sessions", num_instances);
+        tracing::info!("Created {} ONNX sessions", num_instances);
 
         Ok(Self {
             counter: Arc::new(AtomicUsize::new(0)),
@@ -93,7 +93,7 @@ impl OrtModelService {
         let index = self.counter.fetch_add(1, Ordering::SeqCst) % self.sessions.len();
         let session = &self.sessions[index];
 
-        tracing::debug!("handling request with session {}", index);
+        tracing::debug!("Handling request with session {}", index);
 
         let input_tensor = ort::inputs![input.view()]
             .map_err(|e| Status::internal(format!("failed to create input tensor: {}", e)))?;

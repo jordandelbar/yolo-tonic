@@ -5,7 +5,7 @@ use crate::routes::video_stream;
 
 use axum::routing::{get, Router};
 use std::{error::Error, sync::Arc};
-use tokio::net::TcpListener;
+use tokio::{net::TcpListener, signal};
 
 pub async fn start_app(config: Settings) -> Result<(), Box<dyn Error>> {
     let camera = match Camera::new().await {
@@ -21,7 +21,7 @@ pub async fn start_app(config: Settings) -> Result<(), Box<dyn Error>> {
         config.prediction_service.get_address(),
     ));
 
-    tokio::spawn(async move {
+    let prediction_handle = tokio::spawn(async move {
         loop {
             tracing::info!("Starting prediction worker...");
             prediction_worker(camera_clone.clone(), prediction_client.clone()).await;
@@ -36,9 +36,45 @@ pub async fn start_app(config: Settings) -> Result<(), Box<dyn Error>> {
         .into_make_service();
 
     let addr = config.app.get_address();
-    tracing::info!("starting app on {}", &addr);
+    tracing::info!("Starting app on {}", &addr);
     let listener = TcpListener::bind(&addr).await?;
-    axum::serve(listener, app).await?;
+
+    let server = axum::serve(listener, app);
+
+    let graceful_shutdown = async move {
+        shutdown_signal().await;
+        tracing::info!("Signal received, starting graceful shutdown");
+        prediction_handle.abort();
+    };
+
+    tokio::select! {
+        result = server.with_graceful_shutdown(graceful_shutdown) => {
+            result?;
+        }
+        _ = signal::ctrl_c() => {
+            tracing::info!{"Forcing shutdown after Ctrl-C"}
+        }
+    }
 
     Ok(())
+}
+
+async fn shutdown_signal() {
+    let ctrl_c = async {
+        signal::ctrl_c()
+            .await
+            .expect("failed to install Ctrl+C handler");
+    };
+
+    let terminate = async {
+        signal::unix::signal(signal::unix::SignalKind::terminate())
+            .expect("failed to install signal handler")
+            .recv()
+            .await;
+    };
+
+    tokio::select! {
+        _ = ctrl_c => {},
+        _ = terminate => {},
+    }
 }
