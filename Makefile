@@ -1,4 +1,6 @@
-.PHONY: run-server run-client
+.PHONY: download-model local-run-server \
+		local-run-client local-all local-services-up \
+		services-up open-webpage
 
 # For local use
 download-model:
