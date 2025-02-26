@@ -65,7 +65,11 @@ impl PredictionClient {
 }
 
 #[instrument(skip(camera, prediction_client))]
-pub async fn prediction_worker(camera: Arc<Camera>, prediction_client: Arc<PredictionClient>) {
+pub async fn prediction_worker(
+    camera: Arc<Camera>,
+    prediction_client: Arc<PredictionClient>,
+    prediction_delay: u64,
+) {
     let mut client = match prediction_client.get_client().await {
         Ok(c) => c,
         Err(e) => {
@@ -74,7 +78,7 @@ pub async fn prediction_worker(camera: Arc<Camera>, prediction_client: Arc<Predi
         }
     };
     loop {
-        sleep(Duration::from_millis(60)).await;
+        sleep(Duration::from_millis(prediction_delay)).await;
 
         let frame = match camera.capture_frame().await {
             Ok(frame) if !frame.empty() => {

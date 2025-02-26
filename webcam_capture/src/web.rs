@@ -24,7 +24,12 @@ pub async fn start_app(config: Settings) -> Result<(), Box<dyn Error>> {
     let prediction_handle = tokio::spawn(async move {
         loop {
             tracing::info!("Starting prediction worker...");
-            prediction_worker(camera_clone.clone(), prediction_client.clone()).await;
+            prediction_worker(
+                camera_clone.clone(),
+                prediction_client.clone(),
+                config.prediction_service.get_delay_milliseconds(),
+            )
+            .await;
             tracing::error!("Prediction worker exited. Restarting in 5 seconds...");
             tokio::time::sleep(std::time::Duration::from_secs(5)).await;
         }

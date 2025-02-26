@@ -32,11 +32,16 @@ impl AppSettings {
 pub struct PredictionServiceSettings {
     pub host: String,
     pub port: u16,
+    pub prediction_fps: u64,
 }
 
 impl PredictionServiceSettings {
-    pub fn get_address(self) -> String {
+    pub fn get_address(&self) -> String {
         format!("http://{}:{}", self.host, self.port)
+    }
+
+    pub fn get_delay_milliseconds(&self) -> u64 {
+        (1000.0 / self.prediction_fps as f64).round() as u64
     }
 }
 
