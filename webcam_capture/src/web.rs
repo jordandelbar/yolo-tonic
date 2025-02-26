@@ -1,7 +1,8 @@
 use crate::camera::Camera;
 use crate::config::Settings;
 use crate::prediction::{prediction_worker, PredictionClient};
-use crate::routes::video_stream;
+use crate::routes::video_feed;
+use crate::stream::VideoStream;
 
 use axum::routing::{get, Router};
 use std::{error::Error, sync::Arc};
@@ -20,6 +21,7 @@ pub async fn start_app(config: Settings) -> Result<(), Box<dyn Error>> {
     let prediction_client = Arc::new(PredictionClient::new(
         config.prediction_service.get_address(),
     ));
+    let video_stream = VideoStream::new(camera, config.app.get_stream_delay_ms());
 
     let prediction_handle = tokio::spawn(async move {
         loop {
@@ -27,7 +29,7 @@ pub async fn start_app(config: Settings) -> Result<(), Box<dyn Error>> {
             prediction_worker(
                 camera_clone.clone(),
                 prediction_client.clone(),
-                config.prediction_service.get_delay_milliseconds(),
+                config.prediction_service.get_prediction_delay_ms(),
             )
             .await;
             tracing::error!("Prediction worker exited. Restarting in 5 seconds...");
@@ -36,8 +38,8 @@ pub async fn start_app(config: Settings) -> Result<(), Box<dyn Error>> {
     });
 
     let app = Router::new()
-        .route("/video_feed", get(video_stream))
-        .with_state(camera)
+        .route("/video_feed", get(video_feed))
+        .with_state(video_stream)
         .into_make_service();
 
     let addr = config.app.get_address();
