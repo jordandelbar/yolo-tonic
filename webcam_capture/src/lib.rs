@@ -1,6 +1,7 @@
 mod camera;
 mod prediction;
 mod routes;
+mod stream;
 
 pub mod config;
 pub mod web;

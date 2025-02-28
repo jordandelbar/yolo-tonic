@@ -20,11 +20,16 @@ where
 pub struct AppSettings {
     pub host: String,
     pub port: u16,
+    pub video_stream_fps: u64,
 }
 
 impl AppSettings {
     pub fn get_address(self) -> String {
         format!("{}:{}", self.host, self.port)
+    }
+
+    pub fn get_stream_delay_ms(&self) -> u64 {
+        fps_to_delay_ms(self.video_stream_fps)
     }
 }
 
@@ -32,11 +37,16 @@ impl AppSettings {
 pub struct PredictionServiceSettings {
     pub host: String,
     pub port: u16,
+    pub prediction_fps: u64,
 }
 
 impl PredictionServiceSettings {
-    pub fn get_address(self) -> String {
+    pub fn get_address(&self) -> String {
         format!("http://{}:{}", self.host, self.port)
+    }
+
+    pub fn get_prediction_delay_ms(&self) -> u64 {
+        fps_to_delay_ms(self.prediction_fps)
     }
 }
 
@@ -84,6 +94,7 @@ impl LogLevel {
         }
     }
 }
+
 impl TryFrom<String> for LogLevel {
     type Error = String;
 
@@ -97,6 +108,10 @@ impl TryFrom<String> for LogLevel {
             )),
         }
     }
+}
+
+fn fps_to_delay_ms(fps: u64) -> u64 {
+    (1000.0 / fps as f64).round() as u64
 }
 
 pub fn get_configuration() -> Result<Settings, config::ConfigError> {

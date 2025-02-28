@@ -2,6 +2,7 @@ use crate::{
     config::Settings, inference_service::InferenceService, model_service::ModelService,
     ort_service::OrtModelService,
 };
+use tokio::signal;
 use tonic::transport::Server;
 use yolo_proto::yolo_service_server::YoloServiceServer;
 
@@ -24,9 +25,14 @@ impl<M: ModelService> Service<M> {
 
         tracing::info!("Inference service listening on {}", self.addr);
 
+        let shutdown = async {
+            shutdown_signal().await;
+            tracing::info!("Shutdown signal received, starting graceful shutdown")
+        };
+
         Server::builder()
             .add_service(YoloServiceServer::new(self.inference_service.clone()))
-            .serve(addr)
+            .serve_with_shutdown(addr, shutdown)
             .await?;
 
         Ok(())
@@ -38,10 +44,30 @@ pub async fn start_service(config: Settings) -> Result<(), Box<dyn std::error::E
         OrtModelService::new(&config).expect("failed to instantiate ort model service");
 
     let addr = config.service.get_address();
-    let mut app = Service::new(ort_model_service, &addr);
-    tracing::info!("listening on {}", &addr);
+    let mut service = Service::new(ort_model_service, &addr);
+    tracing::info!("Listening on {}", &addr);
 
-    app.run().await?;
+    service.run().await?;
 
     Ok(())
+}
+
+async fn shutdown_signal() {
+    let ctrl_c = async {
+        signal::ctrl_c()
+            .await
+            .expect("failed to install Ctrl+C handler");
+    };
+
+    let terminate = async {
+        signal::unix::signal(signal::unix::SignalKind::terminate())
+            .expect("failed to install signal handler")
+            .recv()
+            .await;
+    };
+
+    tokio::select! {
+        _ = ctrl_c => {},
+        _ = terminate => {},
+    }
 }
