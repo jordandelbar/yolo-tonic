@@ -1,8 +1,8 @@
 mod inference_service;
 mod model_service;
 mod ort_service;
-mod service;
+mod server;
 
 pub mod config;
 
-pub use service::start_service;
+pub use server::start_server;

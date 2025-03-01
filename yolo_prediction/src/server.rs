@@ -6,12 +6,12 @@ use tokio::signal;
 use tonic::transport::Server;
 use yolo_proto::yolo_service_server::YoloServiceServer;
 
-pub struct Service<M: ModelService> {
+pub struct GrpcServer<M: ModelService> {
     inference_service: InferenceService<M>,
     addr: String,
 }
 
-impl<M: ModelService> Service<M> {
+impl<M: ModelService> GrpcServer<M> {
     pub fn new(model_service: M, addr: &str) -> Self {
         let inference_service = InferenceService::new(model_service);
         Self {
@@ -39,15 +39,15 @@ impl<M: ModelService> Service<M> {
     }
 }
 
-pub async fn start_service(config: Settings) -> Result<(), Box<dyn std::error::Error>> {
+pub async fn start_server(config: Settings) -> Result<(), Box<dyn std::error::Error>> {
     let ort_model_service =
         OrtModelService::new(&config).expect("failed to instantiate ort model service");
 
     let addr = config.service.get_address();
-    let mut service = Service::new(ort_model_service, &addr);
+    let mut grpc_server = GrpcServer::new(ort_model_service, &addr);
     tracing::info!("Listening on {}", &addr);
 
-    service.run().await?;
+    grpc_server.run().await?;
 
     Ok(())
 }

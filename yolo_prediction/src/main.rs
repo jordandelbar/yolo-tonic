@@ -1,5 +1,5 @@
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
-use yolo_prediction::{config, start_service};
+use yolo_prediction::{config, start_server};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -15,5 +15,5 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with(tracing_subscriber::fmt::layer().json().with_level(true))
         .init();
 
-    start_service(config).await
+    start_server(config).await
 }
