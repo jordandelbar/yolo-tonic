@@ -15,22 +15,22 @@ pub async fn start_app(config: Settings) -> Result<(), Box<dyn Error>> {
         }
     };
 
-    let camera_clone = camera.clone();
     let prediction_client = Arc::new(PredictionClient::new(
         config.prediction_service.get_address(),
     ));
 
-    let server = HttpServer::new(camera, config.clone()).await?;
+    let server = HttpServer::new(camera.clone(), config.clone()).await?;
 
     let (shutdown_tx, mut prediction_shutdown_rx) = broadcast::channel(1);
     let server_shutdown_rx = shutdown_tx.subscribe();
 
     let prediction_handle = tokio::spawn(async move {
+        // TODO: struct of its own
         loop {
             tracing::info!("Starting prediction worker...");
             tokio::select! {
                 _ = prediction_worker(
-                    camera_clone.clone(),
+                    camera.clone(),
                     prediction_client.clone(),
                     config.prediction_service.get_prediction_delay_ms(),
                 ) => {
