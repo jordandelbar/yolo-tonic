@@ -3,7 +3,7 @@ mod prediction;
 mod routes;
 mod stream;
 
+pub mod app;
 pub mod config;
-pub mod web;
 
-pub use web::start_app;
+pub use app::start_app;

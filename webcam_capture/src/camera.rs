@@ -1,4 +1,10 @@
-use opencv::{core, core::Mat, imgcodecs, imgproc, prelude::*, videoio};
+use opencv::{
+    core,
+    core::{Mat, Vector},
+    imgcodecs, imgproc,
+    prelude::*,
+    videoio,
+};
 use thiserror::Error;
 use tokio::sync::Mutex;
 use yolo_proto::BoundingBox;
@@ -79,8 +85,8 @@ impl Camera {
                 )
                 .map_err(CameraError::from)?;
             }
-            let mut buf = opencv::core::Vector::<u8>::new();
-            imgcodecs::imencode(".jpg", &frame, &mut buf, &opencv::core::Vector::new())
+            let mut buf = Vector::<u8>::new();
+            imgcodecs::imencode(".jpg", &frame, &mut buf, &Vector::new())
                 .map_err(CameraError::EncodeFrameFailed)?;
             return Ok(Some(buf.into()));
         }

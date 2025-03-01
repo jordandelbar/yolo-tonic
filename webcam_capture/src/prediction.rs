@@ -6,17 +6,21 @@ use std::{
 };
 use thiserror::Error;
 use tokio::time::{sleep, timeout};
+use tonic::{
+    transport::{Channel, Error},
+    Request, Status,
+};
 use tracing::instrument;
 use yolo_proto::{yolo_service_client::YoloServiceClient, ImageFrame};
 
 #[derive(Error, Debug)]
 pub enum PredictionClientError {
     #[error("Failed to connect to gRPC server: {0}")]
-    ConnectionFailed(#[from] tonic::transport::Error),
+    ConnectionFailed(#[from] Error),
     #[error("Maximum connection retries exceeded.")]
     MaxRetriesExceeded,
     #[error("gRPC request failed: {0}")]
-    GrpcRequestFailed(#[from] tonic::Status),
+    GrpcRequestFailed(#[from] Status),
 }
 
 pub struct PredictionClient {
@@ -28,9 +32,7 @@ impl PredictionClient {
         PredictionClient { address }
     }
 
-    pub async fn get_client(
-        &self,
-    ) -> Result<YoloServiceClient<tonic::transport::Channel>, PredictionClientError> {
+    pub async fn get_client(&self) -> Result<YoloServiceClient<Channel>, PredictionClientError> {
         let mut retry_delay = Duration::from_millis(50);
         let max_retry_delay = Duration::from_secs(1);
         let max_retries = 5;
@@ -104,7 +106,7 @@ pub async fn prediction_worker(
             .unwrap()
             .as_millis() as i64;
 
-        let request = tonic::Request::new(ImageFrame {
+        let request = Request::new(ImageFrame {
             image_data: frame,
             timestamp,
         });
