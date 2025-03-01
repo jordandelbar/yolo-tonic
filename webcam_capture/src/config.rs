@@ -24,7 +24,7 @@ pub struct AppSettings {
 }
 
 impl AppSettings {
-    pub fn get_address(self) -> String {
+    pub fn get_address(&self) -> String {
         format!("{}:{}", self.host, self.port)
     }
 
