@@ -14,7 +14,7 @@ use tracing::instrument;
 use yolo_proto::{yolo_service_client::YoloServiceClient, ImageFrame};
 
 #[derive(Error, Debug)]
-pub enum PredictionClientError {
+pub enum PredictionServiceError {
     #[error("Failed to connect to gRPC server: {0}")]
     ConnectionFailed(#[from] Error),
     #[error("Maximum connection retries exceeded.")]
@@ -23,16 +23,29 @@ pub enum PredictionClientError {
     GrpcRequestFailed(#[from] Status),
 }
 
-pub struct PredictionClient {
-    address: String,
+pub struct PredictionService {
+    camera: Arc<Camera>,
+    client: YoloServiceClient<Channel>,
+    prediction_delay: u64,
 }
 
-impl PredictionClient {
-    pub fn new(address: String) -> Self {
-        PredictionClient { address }
+impl PredictionService {
+    pub async fn new(
+        camera: Arc<Camera>,
+        address: String,
+        prediction_delay: u64,
+    ) -> Result<Self, PredictionServiceError> {
+        let client = Self::get_client(address).await?;
+        Ok(Self {
+            camera,
+            client,
+            prediction_delay,
+        })
     }
 
-    pub async fn get_client(&self) -> Result<YoloServiceClient<Channel>, PredictionClientError> {
+    async fn get_client(
+        address: String,
+    ) -> Result<YoloServiceClient<Channel>, PredictionServiceError> {
         let mut retry_delay = Duration::from_millis(50);
         let max_retry_delay = Duration::from_secs(1);
         let max_retries = 5;
@@ -41,14 +54,14 @@ impl PredictionClient {
         loop {
             match timeout(
                 Duration::from_secs(1),
-                YoloServiceClient::connect(self.address.clone()),
+                YoloServiceClient::connect(address.clone()),
             )
             .await
             {
                 Ok(Ok(client)) => return Ok(client),
                 Ok(Err(e)) => {
                     tracing::error!("Failed to connect to gRPC server: {:?}", e);
-                    return Err(PredictionClientError::ConnectionFailed(e));
+                    return Err(PredictionServiceError::ConnectionFailed(e));
                 }
                 Err(_) => {
                     tracing::error!("Connection timeout");
@@ -56,7 +69,7 @@ impl PredictionClient {
             }
 
             if retry_count >= max_retries {
-                return Err(PredictionClientError::MaxRetriesExceeded);
+                return Err(PredictionServiceError::MaxRetriesExceeded);
             }
 
             sleep(retry_delay).await;
@@ -64,61 +77,51 @@ impl PredictionClient {
             retry_count += 1;
         }
     }
-}
 
-#[instrument(skip(camera, prediction_client))]
-pub async fn prediction_worker(
-    camera: Arc<Camera>,
-    prediction_client: Arc<PredictionClient>,
-    prediction_delay: u64,
-) {
-    let mut client = match prediction_client.get_client().await {
-        Ok(c) => c,
-        Err(e) => {
-            tracing::error!("Failed to get gRPC client: {:?}", e);
-            return;
-        }
-    };
-    loop {
-        sleep(Duration::from_millis(prediction_delay)).await;
+    #[instrument(skip(self))]
+    pub async fn run(&mut self) {
+        loop {
+            sleep(Duration::from_millis(self.prediction_delay)).await;
 
-        let frame = match camera.capture_frame().await {
-            Ok(frame) if !frame.empty() => {
-                let mut buf = core::Vector::<u8>::new();
-                if let Err(e) = imgcodecs::imencode(".jpg", &frame, &mut buf, &core::Vector::new())
-                {
-                    tracing::error!("Failed to encode frame: {:?}", e);
+            let frame = match self.camera.capture_frame().await {
+                Ok(frame) if !frame.empty() => {
+                    let mut buf = core::Vector::<u8>::new();
+                    if let Err(e) =
+                        imgcodecs::imencode(".jpg", &frame, &mut buf, &core::Vector::new())
+                    {
+                        tracing::error!("Failed to encode frame: {:?}", e);
+                        continue;
+                    }
+                    buf.into()
+                }
+                Ok(_) => {
                     continue;
                 }
-                buf.into()
-            }
-            Ok(_) => {
-                continue;
-            }
-            Err(e) => {
-                tracing::error!("Failed to read frame: {:?}", e);
-                continue;
-            }
-        };
+                Err(e) => {
+                    tracing::error!("Failed to read frame: {:?}", e);
+                    continue;
+                }
+            };
 
-        let timestamp = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_millis() as i64;
+            let timestamp = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_millis() as i64;
 
-        let request = Request::new(ImageFrame {
-            image_data: frame,
-            timestamp,
-        });
+            let request = Request::new(ImageFrame {
+                image_data: frame,
+                timestamp,
+            });
 
-        match client.predict(request).await {
-            Ok(response) => {
-                let predictions = response.into_inner().detections;
-                let mut pred_lock = camera.predictions.lock().await;
-                *pred_lock = predictions;
-            }
-            Err(e) => {
-                tracing::error!("gRPC request failed: {:?}", e);
+            match self.client.predict(request).await {
+                Ok(response) => {
+                    let predictions = response.into_inner().detections;
+                    let mut pred_lock = self.camera.predictions.lock().await;
+                    *pred_lock = predictions;
+                }
+                Err(e) => {
+                    tracing::error!("gRPC request failed: {:?}", e);
+                }
             }
         }
     }

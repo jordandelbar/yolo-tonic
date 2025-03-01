@@ -1,6 +1,6 @@
 use crate::camera::Camera;
 use crate::config::Settings;
-use crate::prediction::{prediction_worker, PredictionClient};
+use crate::prediction::PredictionService;
 use crate::server::HttpServer;
 
 use std::{error::Error, sync::Arc};
@@ -15,32 +15,23 @@ pub async fn start_app(config: Settings) -> Result<(), Box<dyn Error>> {
         }
     };
 
-    let prediction_client = Arc::new(PredictionClient::new(
-        config.prediction_service.get_address(),
-    ));
-
     let server = HttpServer::new(camera.clone(), config.clone()).await?;
 
     let (shutdown_tx, mut prediction_shutdown_rx) = broadcast::channel(1);
     let server_shutdown_rx = shutdown_tx.subscribe();
 
+    let mut prediction_service = PredictionService::new(
+        camera.clone(),
+        config.prediction_service.get_address(),
+        config.prediction_service.get_prediction_delay_ms(),
+    )
+    .await?;
+
     let prediction_handle = tokio::spawn(async move {
-        // TODO: struct of its own
-        loop {
-            tracing::info!("Starting prediction worker...");
-            tokio::select! {
-                _ = prediction_worker(
-                    camera.clone(),
-                    prediction_client.clone(),
-                    config.prediction_service.get_prediction_delay_ms(),
-                ) => {
-                    tracing::error!("Prediction worker exited. Restarting in 5 seconds...");
-                    tokio::time::sleep(std::time::Duration::from_secs(5)).await;
-                }
-                _ = prediction_shutdown_rx.recv() => {
-                    tracing::info!("Prediction worker received shutdown signal.");
-                    break;
-                }
+        tokio::select! {
+            _ = prediction_service.run() => {},
+            _ = prediction_shutdown_rx.recv() => {
+                tracing::info!("Prediction worker received shutdown signal.");
             }
         }
         tracing::info!("Prediction worker stopped.");
