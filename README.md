@@ -33,7 +33,7 @@ open a webpage for visualization.
 
 ## Running with CUDA support
 
-If you have [set up CUDA correctly](docs/setup/nvidia_docker.md), you can run the project with GPU acceleration by executing:
+If you have [set up CUDA correctly](./docs/setup/nvidia_docker.md), you can run the project with GPU acceleration by executing:
 
 ```sh
 make all-cuda
