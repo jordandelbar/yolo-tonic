@@ -20,7 +20,12 @@ where
 pub struct AppSettings {
     pub host: String,
     pub port: u16,
+    #[serde(default = "default_video_stream_fps")]
     pub video_stream_fps: u64,
+}
+
+fn default_video_stream_fps() -> u64 {
+    60
 }
 
 impl AppSettings {
@@ -37,7 +42,12 @@ impl AppSettings {
 pub struct PredictionServiceSettings {
     pub host: String,
     pub port: u16,
+    #[serde(default = "default_prediction_fps")]
     pub prediction_fps: u64,
+}
+
+fn default_prediction_fps() -> u64 {
+    20
 }
 
 impl PredictionServiceSettings {
