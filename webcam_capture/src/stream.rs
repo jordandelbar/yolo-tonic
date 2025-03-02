@@ -46,7 +46,7 @@ impl VideoStream {
                     );
                     let mut body = part_header.into_bytes();
                     body.extend_from_slice(&frame);
-                    body.extend_from_slice(b"\r\n"); // Add the trailing CRLF
+                    body.extend_from_slice(b"\r\n");
                     Some((Ok::<_, VideoStreamError>(Bytes::from(body)), camera))
                 }
                 Ok(_) => None,

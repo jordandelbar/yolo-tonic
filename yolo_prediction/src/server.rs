@@ -1,4 +1,7 @@
-use crate::{config::Settings, inference_service::InferenceService, ort_service::OrtModelService};
+use crate::{
+    config::Settings, inference_service::InferenceService, model_service::ModelService,
+    ort_service::OrtModelService,
+};
 use tokio::signal;
 use tonic::transport::server::Router;
 use tonic::transport::Server;
@@ -10,7 +13,7 @@ pub struct GrpcServer {
 }
 
 impl GrpcServer {
-    pub fn new(model_service: OrtModelService, addr: &str) -> Self {
+    pub fn new(model_service: impl ModelService, addr: &str) -> Self {
         let inference_service = InferenceService::new(model_service);
         let router = Server::builder().add_service(YoloServiceServer::new(inference_service));
 

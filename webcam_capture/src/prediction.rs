@@ -61,7 +61,6 @@ impl PredictionService {
                 Ok(Ok(client)) => return Ok(client),
                 Ok(Err(e)) => {
                     tracing::error!("Failed to connect to gRPC server: {:?}", e);
-                    return Err(PredictionServiceError::ConnectionFailed(e));
                 }
                 Err(_) => {
                     tracing::error!("Connection timeout");

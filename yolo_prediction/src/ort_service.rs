@@ -76,7 +76,7 @@ impl OrtModelService {
         let sessions = (0..num_instances)
             .map(|_| {
                 let session =
-                    Session::builder()?.commit_from_file(&settings.model.get_model_path())?;
+                    Session::builder()?.commit_from_file(settings.model.get_model_path())?;
                 Ok(Arc::new(session))
             })
             .collect::<Result<Vec<_>, ort::Error>>()?;
@@ -171,7 +171,7 @@ impl ModelService for OrtModelService {
             result.push(boxes[0].clone());
             boxes = boxes
                 .iter()
-                .filter(|box1| intersection(&boxes[0], &box1) / union(&boxes[0], &box1) < 0.7)
+                .filter(|box1| intersection(&boxes[0], box1) / union(&boxes[0], box1) < 0.7)
                 .cloned()
                 .collect();
         }
