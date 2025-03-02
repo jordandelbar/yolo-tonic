@@ -7,7 +7,7 @@ on:
     paths:
       - "webcam_capture/**"
       - "yolo_prediction/**"
-      - "Dockerfile"
+      - "*.Dockerfile"
   workflow_dispatch:
 
 permissions:
