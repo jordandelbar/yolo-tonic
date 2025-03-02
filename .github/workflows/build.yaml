@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        service: [webcam_capture, yolo_prediction]
+        service: [webcam_capture, yolo_prediction, yolo_prediction_cuda]
         include:
           - service: webcam_capture
             dockerfile: webcam_capture/Dockerfile
@@ -42,17 +42,17 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.REGISTRY_TOKEN }}
 
-      # - name: Cache YOLO Model
-      #   if: matrix.service == 'yolo_prediction'
-      #   uses: actions/cache@v4
-      #   with:
-      #     path: ./yolo_prediction/models
-      #     key: yolo-model-${{ runner.os }}
-      #     restore-keys: |
-      #       yolo-model-${{ runner.os }}-
+      - name: Cache YOLO Model
+        if: matrix.service == 'yolo_prediction'
+        uses: actions/cache@v4
+        with:
+          path: ./yolo_prediction/models
+          key: yolo-model-${{ runner.os }}
+          restore-keys: |
+            yolo-model-${{ runner.os }}-
 
       - name: Download YOLO Model if missing
-        if: matrix.service == 'yolo_prediction'
+        if: matrix.service == 'yolo_prediction' || matrix.service == 'yolo_prediction_cuda'
         run: |
           if [ ! -f "./yolo_prediction/models/yolov8m.onnx" ]; then
             make download-model
