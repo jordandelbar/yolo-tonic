@@ -1,6 +1,6 @@
 .PHONY: download-model local-run-server \
 		local-run-client local-all local-services-up \
-		services-up open-webpage
+		services-up open-webpage all-cuda
 
 # For local use
 download-model:
@@ -28,10 +28,10 @@ local-services-cuda-up:
 
 # For external use
 services-up:
-	@docker compose up -f compose.yaml -d
+	@docker compose -f compose.yaml up -d
 
 services-up-cuda:
-	@docker compose up -f compose.cuda.yaml -d
+	@docker compose -f compose.cuda.yaml up -d
 
 open-webpage:
 	@if command -v xdg-open > /dev/null; then xdg-open index.html; \
@@ -44,3 +44,4 @@ services-down:
 	@docker compose down
 
 all: services-up open-webpage
+all-cuda: services-up-cuda open-webpage
