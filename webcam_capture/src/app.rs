@@ -1,12 +1,10 @@
 use crate::camera::Camera;
 use crate::config::Settings;
-use crate::prediction::{prediction_worker, PredictionClient};
-use crate::routes::video_feed;
-use crate::stream::VideoStream;
+use crate::prediction::PredictionService;
+use crate::server::HttpServer;
 
-use axum::routing::{get, Router};
 use std::{error::Error, sync::Arc};
-use tokio::{net::TcpListener, signal};
+use tokio::{signal, sync::broadcast};
 
 pub async fn start_app(config: Settings) -> Result<(), Box<dyn Error>> {
     let camera = match Camera::new().await {
@@ -17,51 +15,36 @@ pub async fn start_app(config: Settings) -> Result<(), Box<dyn Error>> {
         }
     };
 
-    let camera_clone = camera.clone();
-    let prediction_client = Arc::new(PredictionClient::new(
+    let server = HttpServer::new(camera.clone(), config.clone()).await?;
+
+    let (shutdown_tx, mut prediction_shutdown_rx) = broadcast::channel(1);
+    let server_shutdown_rx = shutdown_tx.subscribe();
+
+    let mut prediction_service = PredictionService::new(
+        camera.clone(),
         config.prediction_service.get_address(),
-    ));
-    let video_stream = VideoStream::new(camera, config.app.get_stream_delay_ms());
+        config.prediction_service.get_prediction_delay_ms(),
+    )
+    .await?;
 
     let prediction_handle = tokio::spawn(async move {
-        loop {
-            tracing::info!("Starting prediction worker...");
-            prediction_worker(
-                camera_clone.clone(),
-                prediction_client.clone(),
-                config.prediction_service.get_prediction_delay_ms(),
-            )
-            .await;
-            tracing::error!("Prediction worker exited. Restarting in 5 seconds...");
-            tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+        tokio::select! {
+            _ = prediction_service.run() => {},
+            _ = prediction_shutdown_rx.recv() => {
+                tracing::info!("Prediction worker received shutdown signal.");
+            }
         }
+        tracing::info!("Prediction worker stopped.");
     });
 
-    let app = Router::new()
-        .route("/video_feed", get(video_feed))
-        .with_state(video_stream)
-        .into_make_service();
+    let server_handle = tokio::spawn(async move { server.run(server_shutdown_rx).await });
 
-    let addr = config.app.get_address();
-    tracing::info!("Starting app on {}", &addr);
-    let listener = TcpListener::bind(&addr).await?;
+    shutdown_signal().await;
+    tracing::info!("Shutdown signal received, starting graceful shutdown.");
 
-    let server = axum::serve(listener, app);
-
-    let graceful_shutdown = async move {
-        shutdown_signal().await;
-        tracing::info!("Signal received, starting graceful shutdown");
-        prediction_handle.abort();
-    };
-
-    tokio::select! {
-        result = server.with_graceful_shutdown(graceful_shutdown) => {
-            result?;
-        }
-        _ = signal::ctrl_c() => {
-            tracing::info!{"Forcing shutdown after Ctrl-C"}
-        }
-    }
+    let _ = shutdown_tx.send(());
+    let _ = prediction_handle.await;
+    let _ = server_handle.await;
 
     Ok(())
 }

@@ -27,6 +27,9 @@ jobs:
           - service: yolo_prediction
             dockerfile: yolo_prediction/Dockerfile
             tag: yolo-prediction
+          - service: yolo_prediction_cuda
+            dockerfile: yolo_prediction/cuda.Dockerfile
+            tag: yolo-prediction-cuda
 
     steps:
       - name: Checkout code

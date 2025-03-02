@@ -49,7 +49,7 @@ impl VideoStream {
                     body.extend_from_slice(b"\r\n"); // Add the trailing CRLF
                     Some((Ok::<_, VideoStreamError>(Bytes::from(body)), camera))
                 }
-                Ok(None) => None,
+                Ok(_) => None,
                 Err(e) => {
                     tracing::error!("Error getting frame: {:?}", e);
                     Some((Err(VideoStreamError::from(e)), camera))

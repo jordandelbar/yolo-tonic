@@ -3,9 +3,9 @@
 ## 📝 Overview
 
 This project implements real-time object detection using a YOLO v8 model, a Rust gRPC service (Tonic + Ort)
-for inference, and an Axum-based middleware that streams video from a webcam or file,
+for inference, and an Axum-based middleware that streams video from a webcam,
 collects predictions, and serves them via Http.
-A simple HTML page is available to visualize the detections live from a webcam.
+A simple HTML page is available to visualize the detections live from the webcam.
 
 ![Alt text](./docs/images/sophie.png)
 
@@ -24,12 +24,20 @@ A simple HTML page is available to visualize the detections live from a webcam.
 
 To run the project, simply execute the following command at the root directory:
 
-```bash
+```sh
 make all
 ```
 
 This will download the necessary images, runs the service and automatically
 open a webpage for visualization.
+
+## Running with CUDA support
+
+If you have [set up CUDA correctly](docs/setup/nvidia_docker.md), you can run the project with GPU acceleration by executing:
+
+```sh
+make all-cuda
+```
 
 ## 🐧 OS Compatibility
 
