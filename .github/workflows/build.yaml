@@ -42,14 +42,14 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.REGISTRY_TOKEN }}
 
-      - name: Cache YOLO Model
-        if: matrix.service == 'yolo_prediction'
-        uses: actions/cache@v4
-        with:
-          path: ./yolo_prediction/models
-          key: yolo-model-${{ runner.os }}
-          restore-keys: |
-            yolo-model-${{ runner.os }}-
+      # - name: Cache YOLO Model
+      #   if: matrix.service == 'yolo_prediction'
+      #   uses: actions/cache@v4
+      #   with:
+      #     path: ./yolo_prediction/models
+      #     key: yolo-model-${{ runner.os }}
+      #     restore-keys: |
+      #       yolo-model-${{ runner.os }}-
 
       - name: Download YOLO Model if missing
         if: matrix.service == 'yolo_prediction'
