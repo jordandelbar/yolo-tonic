@@ -1,6 +1,4 @@
 app:
   port: 8000
-  video_stream_fps: 50
 prediction_service:
   port: 50051
-  prediction_fps: 20

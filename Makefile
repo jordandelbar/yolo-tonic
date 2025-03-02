@@ -20,9 +20,18 @@ local-services-build:
 local-services-up:
 	@docker compose -f compose.local.yaml up -d
 
+local-services-cuda-build:
+	@docker compose -f compose.cuda.local.yaml build
+
+local-services-cuda-up:
+	@docker compose -f compose.cuda.local.yaml up -d
+
 # For external use
 services-up:
-	@docker compose up -d
+	@docker compose up -f compose.yaml -d
+
+services-up-cuda:
+	@docker compose up -f compose.cuda.yaml -d
 
 open-webpage:
 	@if command -v xdg-open > /dev/null; then xdg-open index.html; \
