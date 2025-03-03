@@ -1,5 +1,5 @@
 use crate::{
-    config::Settings, inference_service::InferenceService, model_service::ModelService,
+    config::Config, inference_service::InferenceService, model_service::ModelService,
     ort_service::OrtModelService,
 };
 use tokio::signal;
@@ -38,11 +38,11 @@ impl GrpcServer {
     }
 }
 
-pub async fn start_server(config: Settings) -> Result<(), Box<dyn std::error::Error>> {
+pub async fn start_server(config: Config) -> Result<(), Box<dyn std::error::Error>> {
     let ort_model_service =
-        OrtModelService::new(&config).expect("failed to instantiate ort model service");
+        OrtModelService::new(&config.model).expect("failed to instantiate ort model service");
 
-    let addr = config.service.get_address();
+    let addr = config.server.get_address();
     let grpc_server = GrpcServer::new(ort_model_service, &addr);
     tracing::info!("Listening on {}", &addr);
 

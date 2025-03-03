@@ -1,4 +1,4 @@
-use crate::config::Settings;
+use crate::config::ModelConfig;
 use crate::model_service::ModelService;
 use image::{imageops::FilterType, GenericImageView};
 use ndarray::{s, Array, Axis, Ix4};
@@ -65,18 +65,19 @@ fn transform_image_frame(image_frame: &ImageFrame) -> Result<(Array<f32, Ix4>, u
 pub struct OrtModelService {
     sessions: Arc<Vec<Arc<Session>>>,
     counter: Arc<AtomicUsize>,
+    min_probability: f32,
 }
 
 impl OrtModelService {
-    pub fn new(settings: &Settings) -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn new(model_config: &ModelConfig) -> Result<Self, Box<dyn std::error::Error>> {
         ort::init()
             .with_execution_providers([CUDAExecutionProvider::default().build()])
             .commit()?;
-        let num_instances = settings.model.num_instances;
+        let num_instances = model_config.num_instances;
         let sessions = (0..num_instances)
             .map(|_| {
                 let session =
-                    Session::builder()?.commit_from_file(settings.model.get_model_path())?;
+                    Session::builder()?.commit_from_file(model_config.get_model_path())?;
                 Ok(Arc::new(session))
             })
             .collect::<Result<Vec<_>, ort::Error>>()?;
@@ -86,6 +87,7 @@ impl OrtModelService {
         Ok(Self {
             counter: Arc::new(AtomicUsize::new(0)),
             sessions: Arc::new(sessions),
+            min_probability: model_config.min_probability,
         })
     }
 
@@ -145,7 +147,7 @@ impl ModelService for OrtModelService {
                 .reduce(|accum, row| if row.1 > accum.1 { row } else { accum })
                 .unwrap();
 
-            if prob < 0.55 {
+            if prob < self.min_probability {
                 continue;
             }
 

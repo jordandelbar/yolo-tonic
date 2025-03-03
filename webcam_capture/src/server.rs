@@ -1,4 +1,4 @@
-use crate::{camera::Camera, config::Settings, routes::video_feed, stream::VideoStream};
+use crate::{camera::Camera, config::Config, routes::video_feed, stream::VideoStream};
 use axum::{routing::get, Router};
 use std::sync::Arc;
 use tokio::{net::TcpListener, sync::broadcast::Receiver};
@@ -9,7 +9,7 @@ pub struct HttpServer {
 }
 
 impl HttpServer {
-    pub async fn new(camera: Arc<Camera>, config: Settings) -> anyhow::Result<Self> {
+    pub async fn new(camera: Arc<Camera>, config: Config) -> anyhow::Result<Self> {
         let addr = config.app.get_address();
         let video_stream = VideoStream::new(camera, config.app.get_stream_delay_ms());
         let router = Router::new()

@@ -2,9 +2,9 @@ use serde::Deserialize;
 use std::path::PathBuf;
 
 #[derive(Debug, Deserialize, Clone)]
-pub struct Settings {
-    pub service: ServiceSettings,
-    pub model: ModelSettings,
+pub struct Config {
+    pub server: ServerConfig,
+    pub model: ModelConfig,
     #[serde(deserialize_with = "deserialize_log_level")]
     pub log_level: LogLevel,
 }
@@ -18,23 +18,24 @@ where
 }
 
 #[derive(Debug, Deserialize, Clone)]
-pub struct ServiceSettings {
+pub struct ServerConfig {
     pub host: String,
     pub port: u16,
 }
 
-impl ServiceSettings {
+impl ServerConfig {
     pub fn get_address(self) -> String {
         format!("{}:{}", self.host, self.port)
     }
 }
 
 #[derive(Debug, Deserialize, Clone)]
-pub struct ModelSettings {
+pub struct ModelConfig {
     pub onnx_file: String,
     #[serde(default = "default_model_instances")]
     pub num_instances: usize,
     pub model_dir: PathBuf,
+    pub min_probability: f32,
 }
 
 fn default_model_instances() -> usize {
@@ -43,7 +44,7 @@ fn default_model_instances() -> usize {
         .unwrap_or(5)
 }
 
-impl ModelSettings {
+impl ModelConfig {
     pub fn get_model_path(&self) -> PathBuf {
         self.model_dir.join(&self.onnx_file)
     }
@@ -115,7 +116,7 @@ impl TryFrom<String> for LogLevel {
     }
 }
 
-pub fn get_configuration() -> Result<Settings, config::ConfigError> {
+pub fn get_configuration() -> Result<Config, config::ConfigError> {
     let base_path = std::env::current_dir().expect("Failed to determine the current directory");
     let configuration_directory = base_path.join("configuration");
 
@@ -124,7 +125,7 @@ pub fn get_configuration() -> Result<Settings, config::ConfigError> {
         .try_into()
         .expect("Failed to parse APP_ENVIRONMENT");
 
-    let settings = config::Config::builder()
+    let config = config::Config::builder()
         .add_source(config::File::from(
             configuration_directory.join("base.yaml"),
         ))
@@ -138,12 +139,12 @@ pub fn get_configuration() -> Result<Settings, config::ConfigError> {
         )
         .build()?;
 
-    let settings: Settings = settings.try_deserialize::<Settings>()?;
+    let config: Config = config.try_deserialize::<Config>()?;
 
-    if let Err(e) = settings.model.validate() {
+    if let Err(e) = config.model.validate() {
         tracing::error!("Configuration validation failed: {}", e);
         return Err(config::ConfigError::Message(e));
     }
 
-    Ok(settings)
+    Ok(config)
 }

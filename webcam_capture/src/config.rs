@@ -1,11 +1,11 @@
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize, Clone)]
-pub struct Settings {
-    pub app: AppSettings,
+pub struct Config {
+    pub app: AppConfig,
     #[serde(deserialize_with = "deserialize_log_level")]
     pub log_level: LogLevel,
-    pub prediction_service: PredictionServiceSettings,
+    pub prediction_service: PredictionServiceConfig,
 }
 
 fn deserialize_log_level<'de, D>(deserializer: D) -> Result<LogLevel, D::Error>
@@ -17,7 +17,7 @@ where
 }
 
 #[derive(Debug, Deserialize, Clone)]
-pub struct AppSettings {
+pub struct AppConfig {
     pub host: String,
     pub port: u16,
     #[serde(default = "default_video_stream_fps")]
@@ -28,7 +28,7 @@ fn default_video_stream_fps() -> u64 {
     60
 }
 
-impl AppSettings {
+impl AppConfig {
     pub fn get_address(&self) -> String {
         format!("{}:{}", self.host, self.port)
     }
@@ -39,7 +39,7 @@ impl AppSettings {
 }
 
 #[derive(Debug, Deserialize, Clone)]
-pub struct PredictionServiceSettings {
+pub struct PredictionServiceConfig {
     pub host: String,
     pub port: u16,
     #[serde(default = "default_prediction_fps")]
@@ -50,7 +50,7 @@ fn default_prediction_fps() -> u64 {
     20
 }
 
-impl PredictionServiceSettings {
+impl PredictionServiceConfig {
     pub fn get_address(&self) -> String {
         format!("http://{}:{}", self.host, self.port)
     }
@@ -124,7 +124,7 @@ fn fps_to_delay_ms(fps: u64) -> u64 {
     (1000.0 / fps as f64).round() as u64
 }
 
-pub fn get_configuration() -> Result<Settings, config::ConfigError> {
+pub fn get_configuration() -> Result<Config, config::ConfigError> {
     let base_path = std::env::current_dir().expect("Failed to determine the current directory");
     let configuration_directory = base_path.join("configuration");
 
@@ -133,7 +133,7 @@ pub fn get_configuration() -> Result<Settings, config::ConfigError> {
         .try_into()
         .expect("Failed to parse APP_ENVIRONMENT");
 
-    let settings = config::Config::builder()
+    let config = config::Config::builder()
         .add_source(config::File::from(
             configuration_directory.join("base.yaml"),
         ))
@@ -147,7 +147,7 @@ pub fn get_configuration() -> Result<Settings, config::ConfigError> {
         )
         .build()?;
 
-    let settings: Settings = settings.try_deserialize::<Settings>()?;
+    let config: Config = config.try_deserialize::<Config>()?;
 
-    Ok(settings)
+    Ok(config)
 }

@@ -1,12 +1,12 @@
 use crate::camera::Camera;
-use crate::config::Settings;
+use crate::config::Config;
 use crate::prediction::PredictionService;
 use crate::server::HttpServer;
 
 use std::{error::Error, sync::Arc};
 use tokio::{signal, sync::broadcast};
 
-pub async fn start_app(config: Settings) -> Result<(), Box<dyn Error>> {
+pub async fn start_app(config: Config) -> Result<(), Box<dyn Error>> {
     let camera = match Camera::new().await {
         Ok(cam) => Arc::new(cam),
         Err(e) => {
