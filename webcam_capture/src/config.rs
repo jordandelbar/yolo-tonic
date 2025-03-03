@@ -2,7 +2,7 @@ use serde::Deserialize;
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct Config {
-    pub app: AppConfig,
+    pub server: ServerConfig,
     #[serde(deserialize_with = "deserialize_log_level")]
     pub log_level: LogLevel,
     pub prediction_service: PredictionServiceConfig,
@@ -17,7 +17,7 @@ where
 }
 
 #[derive(Debug, Deserialize, Clone)]
-pub struct AppConfig {
+pub struct ServerConfig {
     pub host: String,
     pub port: u16,
     #[serde(default = "default_video_stream_fps")]
@@ -28,7 +28,7 @@ fn default_video_stream_fps() -> u64 {
     60
 }
 
-impl AppConfig {
+impl ServerConfig {
     pub fn get_address(&self) -> String {
         format!("{}:{}", self.host, self.port)
     }

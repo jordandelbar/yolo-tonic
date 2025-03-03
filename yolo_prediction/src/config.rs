@@ -35,6 +35,7 @@ pub struct ModelConfig {
     #[serde(default = "default_model_instances")]
     pub num_instances: usize,
     pub model_dir: PathBuf,
+    #[serde(default = "default_min_probability")]
     pub min_probability: f32,
 }
 
@@ -42,6 +43,10 @@ fn default_model_instances() -> usize {
     std::thread::available_parallelism()
         .map(|n| n.get())
         .unwrap_or(5)
+}
+
+fn default_min_probability() -> f32 {
+    0.50
 }
 
 impl ModelConfig {

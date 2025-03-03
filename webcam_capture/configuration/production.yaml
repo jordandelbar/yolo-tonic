@@ -1,4 +1,4 @@
-app:
+server:
   host: 0.0.0.0
 prediction_service:
   host: yolo_prediction_service

@@ -1,2 +1,2 @@
-service:
+server:
   port: 50051

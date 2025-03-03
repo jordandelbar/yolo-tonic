@@ -10,8 +10,8 @@ pub struct HttpServer {
 
 impl HttpServer {
     pub async fn new(camera: Arc<Camera>, config: Config) -> anyhow::Result<Self> {
-        let addr = config.app.get_address();
-        let video_stream = VideoStream::new(camera, config.app.get_stream_delay_ms());
+        let addr = config.server.get_address();
+        let video_stream = VideoStream::new(camera, config.server.get_stream_delay_ms());
         let router = Router::new()
             .route("/video_feed", get(video_feed))
             .with_state(video_stream);
