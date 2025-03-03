@@ -7,7 +7,7 @@ use std::{error::Error, sync::Arc};
 use tokio::{signal, sync::broadcast};
 
 pub async fn start_app(config: Config) -> Result<(), Box<dyn Error>> {
-    let camera = match Camera::new().await {
+    let camera: Arc<Camera> = match Camera::new().await {
         Ok(cam) => Arc::new(cam),
         Err(e) => {
             tracing::error!("Failed to initialize camera: {:?}", e);
@@ -15,17 +15,13 @@ pub async fn start_app(config: Config) -> Result<(), Box<dyn Error>> {
         }
     };
 
-    let server = HttpServer::new(camera.clone(), config.clone()).await?;
+    let server = HttpServer::new(camera.clone(), &config.server).await?;
 
     let (shutdown_tx, mut prediction_shutdown_rx) = broadcast::channel(1);
     let server_shutdown_rx = shutdown_tx.subscribe();
 
-    let mut prediction_service = PredictionService::new(
-        camera.clone(),
-        config.prediction_service.get_address(),
-        config.prediction_service.get_prediction_delay_ms(),
-    )
-    .await?;
+    let mut prediction_service =
+        PredictionService::new(camera.clone(), &config.prediction_service).await?;
 
     let prediction_handle = tokio::spawn(async move {
         tokio::select! {

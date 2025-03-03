@@ -1,4 +1,4 @@
-use crate::camera::Camera;
+use crate::{camera::Camera, config::PredictionServiceConfig};
 use opencv::{core, imgcodecs, prelude::*};
 use std::{
     sync::Arc,
@@ -32,14 +32,13 @@ pub struct PredictionService {
 impl PredictionService {
     pub async fn new(
         camera: Arc<Camera>,
-        address: String,
-        prediction_delay: u64,
+        prediction_config: &PredictionServiceConfig,
     ) -> Result<Self, PredictionServiceError> {
-        let client = Self::get_client(address).await?;
+        let client = Self::get_client(prediction_config.get_address()).await?;
         Ok(Self {
             camera,
             client,
-            prediction_delay,
+            prediction_delay: prediction_config.get_prediction_delay_ms(),
         })
     }
 
