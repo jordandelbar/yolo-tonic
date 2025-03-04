@@ -1,4 +1,9 @@
-use crate::{camera::Camera, config::ServerConfig, routes::video_feed, stream::VideoStream};
+use crate::{
+    camera::Camera,
+    config::ServerConfig,
+    routes::{healthcheck, video_feed},
+    stream::VideoStream,
+};
 use axum::{routing::get, Router};
 use std::sync::Arc;
 use tokio::{net::TcpListener, sync::broadcast::Receiver};
@@ -14,6 +19,7 @@ impl HttpServer {
         let video_stream = VideoStream::new(camera, server_config.get_stream_delay_ms());
         let router = Router::new()
             .route("/video_feed", get(video_feed))
+            .route("/health", get(healthcheck))
             .with_state(video_stream);
 
         let listener = TcpListener::bind(addr).await?;
