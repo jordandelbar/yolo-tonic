@@ -1,18 +1,25 @@
 FROM nvidia/cuda:12.8.0-cudnn-devel-ubuntu22.04 AS builder
 
-RUN apt-get update && apt-get install -y curl
+RUN apt-get update && apt-get install -y curl && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 ENV PATH="/root/.cargo/bin:${PATH}"
 
-RUN rustup toolchain install 1.85.0
-RUN rustup default 1.85.0
+RUN rustup toolchain install 1.85.0 --profile minimal && \
+    rustup default 1.85.0 && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 RUN apt-get update && apt-get install -y \
     protobuf-compiler \
     libprotobuf-dev \
     cmake \
     git \
-    build-essential
+    build-essential && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 WORKDIR /app
 
