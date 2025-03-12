@@ -1,7 +1,9 @@
 use crate::model_service::ModelService;
-use yolo_proto::{yolo_service_server::YoloService, ImageFrame, PredictionBatch};
+use yolo_proto::{
+    yolo_service_server::YoloService, Empty, ImageFrame, PredictionBatch, YoloClassLabels,
+};
 
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 use tonic::{async_trait, Request, Response, Status};
 
 #[derive(Debug, Clone)]
@@ -28,6 +30,19 @@ impl<M: ModelService> YoloService for InferenceService<M> {
         let batch = model_service.predict(image_frame).await?;
 
         Ok(Response::new(batch))
+    }
+
+    async fn get_yolo_class_labels(
+        &self,
+        _request: Request<Empty>,
+    ) -> Result<Response<YoloClassLabels>, Status> {
+        let mut hashmap = HashMap::new();
+        hashmap.insert(1, String::from("test"));
+        let response = YoloClassLabels {
+            class_labels: hashmap,
+        };
+
+        Ok(Response::new(response))
     }
 }
 

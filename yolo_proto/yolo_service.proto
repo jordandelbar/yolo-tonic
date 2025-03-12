@@ -2,6 +2,10 @@ syntax = "proto3";
 
 package yolo_service;
 
+message Empty {
+  // Represents an empty request or response.
+}
+
 message ImageFrame {
   bytes image_data = 1;
   int64 timestamp = 2;
@@ -12,7 +16,7 @@ message BoundingBox {
   float y1 = 2;
   float x2 = 3;
   float y2 = 4;
-  string class_label = 5;
+  int32 class_id = 5;
   float confidence = 6;
 }
 
@@ -21,6 +25,11 @@ message PredictionBatch {
   int64 timestamp = 2;
 }
 
+message YoloClassLabels {
+  map<int32, string> class_labels = 1;
+}
+
 service YoloService {
   rpc Predict (ImageFrame) returns (PredictionBatch);
+  rpc GetYoloClassLabels (Empty) returns (YoloClassLabels);
 }

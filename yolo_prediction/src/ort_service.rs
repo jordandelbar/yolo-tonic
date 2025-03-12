@@ -157,12 +157,12 @@ impl ModelService for OrtModelService {
             let h = row[3] / 640. * (img_height as f32);
 
             boxes.push(BoundingBox {
+                class_id: class_id.try_into().unwrap(),
+                confidence: prob,
                 x1: xc - w / 2.,
                 y1: yc - h / 2.,
                 x2: xc + w / 2.,
                 y2: yc + h / 2.,
-                class_label: YOLOV8_CLASS_LABELS[class_id].to_string(),
-                confidence: prob,
             });
         }
 
@@ -181,7 +181,7 @@ impl ModelService for OrtModelService {
         let mut prediction_batch = PredictionBatch::default();
         for bbox in result {
             let prediction = BoundingBox {
-                class_label: bbox.class_label,
+                class_id: bbox.class_id,
                 confidence: bbox.confidence,
                 x1: bbox.x1,
                 y1: bbox.y1,

@@ -60,7 +60,7 @@ impl Camera {
                 let y1 = bbox.y1 as i32;
                 let x2 = bbox.x2 as i32;
                 let y2 = bbox.y2 as i32;
-                let label = format!("{}: {:.2}", bbox.class_label, bbox.confidence);
+                let label = format!("{}: {:.2}", bbox.class_id, bbox.confidence);
 
                 imgproc::rectangle(
                     &mut frame,
