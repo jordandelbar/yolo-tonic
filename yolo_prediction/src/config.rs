@@ -5,6 +5,7 @@ use std::path::PathBuf;
 pub struct Config {
     pub server: ServerConfig,
     pub model: ModelConfig,
+    pub labels: LabelsConfig,
     #[serde(deserialize_with = "deserialize_log_level")]
     pub log_level: LogLevel,
 }
@@ -49,17 +50,10 @@ fn default_min_probability() -> f32 {
     0.50
 }
 
-impl ModelConfig {
-    pub fn get_model_path(&self) -> PathBuf {
-        self.model_dir.join(&self.onnx_file)
-    }
-
-    pub fn validate(&self) -> Result<(), String> {
-        if !self.get_model_path().exists() {
-            return Err(format!("Model file not found: {:?}", self.get_model_path()));
-        }
-        Ok(())
-    }
+#[derive(Debug, Deserialize, Clone)]
+pub struct LabelsConfig {
+    pub labels_file: String,
+    pub labels_dir: PathBuf,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -106,6 +100,7 @@ impl LogLevel {
         }
     }
 }
+
 impl TryFrom<String> for LogLevel {
     type Error = String;
 
@@ -118,6 +113,29 @@ impl TryFrom<String> for LogLevel {
                 other
             )),
         }
+    }
+}
+
+pub trait Validatable {
+    fn get_path(&self) -> PathBuf;
+    fn validate(&self) -> Result<(), String> {
+        if !self.get_path().exists() {
+            Err(format!("File not found: {:?}", self.get_path()))
+        } else {
+            Ok(())
+        }
+    }
+}
+
+impl Validatable for ModelConfig {
+    fn get_path(&self) -> PathBuf {
+        self.model_dir.join(&self.onnx_file)
+    }
+}
+
+impl Validatable for LabelsConfig {
+    fn get_path(&self) -> PathBuf {
+        self.labels_dir.join(&self.labels_file)
     }
 }
 
@@ -147,6 +165,11 @@ pub fn get_configuration() -> Result<Config, config::ConfigError> {
     let config: Config = config.try_deserialize::<Config>()?;
 
     if let Err(e) = config.model.validate() {
+        tracing::error!("Configuration validation failed: {}", e);
+        return Err(config::ConfigError::Message(e));
+    }
+
+    if let Err(e) = config.labels.validate() {
         tracing::error!("Configuration validation failed: {}", e);
         return Err(config::ConfigError::Message(e));
     }

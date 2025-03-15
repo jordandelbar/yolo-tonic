@@ -1,3 +1,4 @@
+use crate::prediction::BoundingBoxWithLabels;
 use opencv::{
     core,
     core::{Mat, Vector},
@@ -7,7 +8,6 @@ use opencv::{
 };
 use thiserror::Error;
 use tokio::sync::Mutex;
-use yolo_proto::BoundingBox;
 
 #[derive(Error, Debug)]
 pub enum CameraError {
@@ -30,7 +30,7 @@ impl From<opencv::Error> for CameraError {
 #[derive(Debug)]
 pub struct Camera {
     pub capture: Mutex<videoio::VideoCapture>,
-    pub predictions: Mutex<Vec<BoundingBox>>,
+    pub predictions: Mutex<Vec<BoundingBoxWithLabels>>,
 }
 
 impl Camera {
@@ -60,12 +60,16 @@ impl Camera {
                 let y1 = bbox.y1 as i32;
                 let x2 = bbox.x2 as i32;
                 let y2 = bbox.y2 as i32;
-                let label = format!("{}: {:.2}", bbox.class_id, bbox.confidence);
+                let label = format!("{}: {:.2}", bbox.class_label, bbox.confidence);
+
+                // OpenCV uses BGR
+                let color =
+                    core::Scalar::new(bbox.blue as f64, bbox.green as f64, bbox.red as f64, 0.0);
 
                 imgproc::rectangle(
                     &mut frame,
                     core::Rect::new(x1, y1, x2 - x1, y2 - y1),
-                    core::Scalar::new(0.0, 255.0, 0.0, 0.0),
+                    color,
                     2,
                     imgproc::LINE_8,
                     0,
@@ -78,7 +82,7 @@ impl Camera {
                     core::Point::new(x1, y1 - 5),
                     imgproc::FONT_HERSHEY_SIMPLEX,
                     0.5,
-                    core::Scalar::new(0.0, 255.0, 0.0, 0.0),
+                    color,
                     1,
                     imgproc::LINE_AA,
                     false,

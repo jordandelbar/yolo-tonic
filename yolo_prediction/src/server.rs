@@ -1,6 +1,9 @@
 use crate::{
-    config::Config, inference_service::InferenceService, model_service::ModelService,
+    config::Config,
+    inference_service::InferenceService,
+    model_service::ModelService,
     ort_service::OrtModelService,
+    state::{ServiceState, State},
 };
 use tokio::signal;
 use tonic::transport::server::Router;
@@ -13,9 +16,15 @@ pub struct GrpcServer {
 }
 
 impl GrpcServer {
-    pub fn new(model_service: impl ModelService, addr: &str) -> Self {
-        let inference_service = InferenceService::new(model_service);
-        let router = Server::builder().add_service(YoloServiceServer::new(inference_service));
+    pub fn new(model_service: impl ModelService, service_state: impl State, addr: &str) -> Self {
+        let inference_service = InferenceService::new(model_service, service_state).unwrap();
+        let reflection_service = tonic_reflection::server::Builder::configure()
+            .register_encoded_file_descriptor_set(yolo_proto::FILE_DESCRIPTOR_SET)
+            .build_v1alpha()
+            .unwrap();
+        let router = Server::builder()
+            .add_service(YoloServiceServer::new(inference_service))
+            .add_service(reflection_service);
 
         Self {
             router,
@@ -41,9 +50,10 @@ impl GrpcServer {
 pub async fn start_server(config: Config) -> Result<(), Box<dyn std::error::Error>> {
     let ort_model_service =
         OrtModelService::new(&config.model).expect("failed to instantiate ort model service");
+    let service_state = ServiceState::new(&config.labels).unwrap();
 
     let addr = config.server.get_address();
-    let grpc_server = GrpcServer::new(ort_model_service, &addr);
+    let grpc_server = GrpcServer::new(ort_model_service, service_state, &addr);
     tracing::info!("Listening on {}", &addr);
 
     grpc_server.run().await?;

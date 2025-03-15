@@ -25,8 +25,15 @@ message PredictionBatch {
   int64 timestamp = 2;
 }
 
+message ColorLabel {
+  string label = 1;
+  uint32 red = 2;
+  uint32 green = 3;
+  uint32 blue = 4;
+}
+
 message YoloClassLabels {
-  map<int32, string> class_labels = 1;
+  repeated ColorLabel class_labels = 1;
 }
 
 service YoloService {

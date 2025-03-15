@@ -1,26 +1,27 @@
-use crate::model_service::ModelService;
+use crate::{model_service::ModelService, state::State};
+use std::sync::Arc;
+use tonic::{async_trait, Request, Response, Status};
 use yolo_proto::{
     yolo_service_server::YoloService, Empty, ImageFrame, PredictionBatch, YoloClassLabels,
 };
 
-use std::{collections::HashMap, sync::Arc};
-use tonic::{async_trait, Request, Response, Status};
-
 #[derive(Debug, Clone)]
-pub struct InferenceService<M: ModelService> {
+pub struct InferenceService<M: ModelService, S: State> {
     model_service: Arc<M>,
+    service_state: Arc<S>,
 }
 
-impl<M: ModelService> InferenceService<M> {
-    pub fn new(model_service: M) -> Self {
-        Self {
+impl<M: ModelService, S: State> InferenceService<M, S> {
+    pub fn new(model_service: M, state: S) -> Result<Self, String> {
+        Ok(Self {
             model_service: Arc::new(model_service),
-        }
+            service_state: Arc::new(state),
+        })
     }
 }
 
 #[async_trait]
-impl<M: ModelService> YoloService for InferenceService<M> {
+impl<M: ModelService, S: State> YoloService for InferenceService<M, S> {
     async fn predict(
         &self,
         request: Request<ImageFrame>,
@@ -36,10 +37,9 @@ impl<M: ModelService> YoloService for InferenceService<M> {
         &self,
         _request: Request<Empty>,
     ) -> Result<Response<YoloClassLabels>, Status> {
-        let mut hashmap = HashMap::new();
-        hashmap.insert(1, String::from("test"));
+        let labels = self.service_state.get_labels().clone();
         let response = YoloClassLabels {
-            class_labels: hashmap,
+            class_labels: labels,
         };
 
         Ok(Response::new(response))
@@ -49,7 +49,10 @@ impl<M: ModelService> YoloService for InferenceService<M> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use yolo_proto::BoundingBox;
+    use crate::config::LabelsConfig;
+    use std::path::PathBuf;
+
+    use yolo_proto::{BoundingBox, ColorLabel};
 
     #[derive(Clone)]
     struct MockModelService {}
@@ -83,10 +86,51 @@ mod tests {
         }
     }
 
+    pub struct MockState {
+        class_labels: Vec<ColorLabel>,
+    }
+
+    impl State for MockState {
+        fn new(_labels_file: &LabelsConfig) -> Result<Self, String> {
+            Ok(MockState {
+                class_labels: vec![
+                    ColorLabel {
+                        label: "class1".to_string(),
+                        red: 255,
+                        green: 0,
+                        blue: 0,
+                    },
+                    ColorLabel {
+                        label: "class2".to_string(),
+                        red: 255,
+                        green: 0,
+                        blue: 0,
+                    },
+                    ColorLabel {
+                        label: "class3".to_string(),
+                        red: 255,
+                        green: 0,
+                        blue: 0,
+                    },
+                ],
+            })
+        }
+
+        fn get_labels(&self) -> &Vec<ColorLabel> {
+            &self.class_labels
+        }
+    }
+
     #[tokio::test]
     async fn test_predict() -> Result<(), Box<dyn std::error::Error>> {
+        let mock_labels_config = LabelsConfig {
+            labels_file: "dummy_labels.txt".to_string(),
+            labels_dir: PathBuf::from("./dummy_labels_dir"),
+        };
+
         let mock_model = MockModelService {};
-        let inference_service = InferenceService::new(mock_model);
+        let mock_state = MockState::new(&mock_labels_config).unwrap();
+        let inference_service = InferenceService::new(mock_model, mock_state)?;
 
         let image_frame = ImageFrame {
             image_data: vec![0; 100],

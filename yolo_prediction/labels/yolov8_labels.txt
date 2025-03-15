@@ -1,0 +1,80 @@
+person, 256, 0, 0
+bicycle, 0, 255, 0
+car, 0, 0, 255
+motorcycle, 255, 255, 0
+airplane, 255, 165, 0
+bus, 128, 0, 128
+train, 0, 255, 255
+truck, 255, 192, 203
+boat, 75, 0, 130
+traffic light, 255, 69, 0
+fire hydrant, 255, 0, 255
+stop sign, 139, 0, 0
+parking meter, 105, 105, 105
+bench, 160, 82, 45
+bird, 255, 215, 0
+cat, 0, 128, 0
+dog, 0, 0, 139
+horse, 139, 69, 19
+sheep, 255, 250, 250
+cow, 210, 105, 30
+elephant, 112, 128, 144
+bear, 0, 100, 0
+zebra, 255, 255, 255
+giraffe, 218, 165, 32
+backpack, 199, 21, 133
+umbrella, 70, 130, 180
+handbag, 255, 20, 147
+tie, 0, 206, 209
+suitcase, 220, 20, 60
+frisbee, 0, 255, 127
+skis, 0, 191, 255
+snowboard, 176, 224, 230
+sports ball, 240, 230, 140
+kite, 154, 205, 50
+baseball bat, 205, 133, 63
+baseball glove, 244, 164, 96
+skateboard, 47, 79, 79
+surfboard, 255, 140, 0
+tennis racket, 30, 144, 255
+bottle, 139, 0, 139
+wine glass, 128, 0, 0
+cup, 205, 92, 92
+fork, 75, 0, 130
+knife, 0, 128, 128
+spoon, 189, 183, 107
+bowl, 154, 205, 50
+banana, 255, 255, 0
+apple, 255, 0, 0
+sandwich, 255, 165, 0
+orange, 255, 140, 0
+broccoli, 34, 139, 34
+carrot, 255, 69, 0
+hot dog, 210, 105, 30
+pizza, 255, 215, 0
+donut, 255, 192, 203
+cake, 255, 20, 147
+chair, 139, 69, 19
+couch, 160, 82, 45
+potted plant, 34, 139, 34
+bed, 139, 0, 0
+dining table, 255, 248, 220
+toilet, 255, 255, 255
+tv, 0, 0, 128
+laptop, 105, 105, 105
+mouse, 169, 169, 169
+remote, 192, 192, 192
+keyboard, 128, 128, 128
+cell phone, 0, 0, 0
+microwave, 255, 140, 0
+oven, 255, 127, 80
+toaster, 233, 150, 122
+sink, 70, 130, 180
+refrigerator, 176, 224, 230
+book, 165, 42, 42
+clock, 255, 223, 0
+vase, 199, 21, 133
+scissors, 220, 20, 60
+teddy bear, 139, 69, 19
+hair drier, 255, 182, 193
+toothbrush, 0, 191, 255

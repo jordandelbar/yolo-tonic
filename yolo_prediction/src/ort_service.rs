@@ -1,4 +1,4 @@
-use crate::config::ModelConfig;
+use crate::config::{ModelConfig, Validatable};
 use crate::model_service::ModelService;
 use image::{imageops::FilterType, GenericImageView};
 use ndarray::{s, Array, Axis, Ix4};
@@ -12,18 +12,6 @@ use std::sync::{
 };
 use tonic::{async_trait, Status};
 use yolo_proto::{BoundingBox, ImageFrame, PredictionBatch};
-
-#[rustfmt::skip]
-const YOLOV8_CLASS_LABELS: [&str; 80] = [
-    "person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck", "boat", "traffic light",
-	"fire hydrant", "stop sign", "parking meter", "bench", "bird", "cat", "dog", "horse", "sheep", "cow", "elephant",
-	"bear", "zebra", "giraffe", "backpack", "umbrella", "handbag", "tie", "suitcase", "frisbee", "skis", "snowboard",
-	"sports ball", "kite", "baseball bat", "baseball glove", "skateboard", "surfboard", "tennis racket", "bottle",
-	"wine glass", "cup", "fork", "knife", "spoon", "bowl", "banana", "apple", "sandwich", "orange", "broccoli",
-	"carrot", "hot dog", "pizza", "donut", "cake", "chair", "couch", "potted plant", "bed", "dining table", "toilet",
-	"tv", "laptop", "mouse", "remote", "keyboard", "cell phone", "microwave", "oven", "toaster", "sink", "refrigerator",
-	"book", "clock", "vase", "scissors", "teddy bear", "hair drier", "toothbrush"
-];
 
 fn intersection(box1: &BoundingBox, box2: &BoundingBox) -> f32 {
     (box1.x2.min(box2.x2) - box1.x1.max(box2.x1)) * (box1.y2.min(box2.y2) - box1.y1.max(box2.y1))
@@ -76,8 +64,7 @@ impl OrtModelService {
         let num_instances = model_config.num_instances;
         let sessions = (0..num_instances)
             .map(|_| {
-                let session =
-                    Session::builder()?.commit_from_file(model_config.get_model_path())?;
+                let session = Session::builder()?.commit_from_file(model_config.get_path())?;
                 Ok(Arc::new(session))
             })
             .collect::<Result<Vec<_>, ort::Error>>()?;

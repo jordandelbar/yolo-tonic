@@ -32,6 +32,7 @@ COPY --from=builder /app/onnxruntime/lib/* /usr/lib/
 COPY --from=builder /app/yolo_prediction/target/release/yolo_prediction /app/yolo_prediction
 COPY --from=builder /app/yolo_prediction/configuration/ /app/configuration
 COPY ./yolo_prediction/models/yolov8m.onnx /app/models/yolov8m.onnx
+COPY ./yolo_prediction/labels/yolov8_labels.txt /app/labels/yolov8_labels.txt
 
 EXPOSE 50051
 

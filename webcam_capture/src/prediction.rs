@@ -11,7 +11,10 @@ use tonic::{
     Request, Status,
 };
 use tracing::instrument;
-use yolo_proto::{yolo_service_client::YoloServiceClient, ImageFrame};
+use yolo_proto::{
+    yolo_service_client::YoloServiceClient, BoundingBox, ColorLabel, Empty, ImageFrame,
+    YoloClassLabels,
+};
 
 #[derive(Error, Debug)]
 pub enum PredictionServiceError {
@@ -23,10 +26,24 @@ pub enum PredictionServiceError {
     GrpcRequestFailed(#[from] Status),
 }
 
+#[derive(Debug)]
+pub struct BoundingBoxWithLabels {
+    pub x1: f32,
+    pub y1: f32,
+    pub x2: f32,
+    pub y2: f32,
+    pub class_label: String,
+    pub red: u32,
+    pub green: u32,
+    pub blue: u32,
+    pub confidence: f32,
+}
+
 pub struct PredictionService {
     camera: Arc<Camera>,
     client: YoloServiceClient<Channel>,
     prediction_delay: u64,
+    class_labels: Vec<ColorLabel>,
 }
 
 impl PredictionService {
@@ -35,11 +52,15 @@ impl PredictionService {
         prediction_config: &PredictionServiceConfig,
     ) -> Result<Self, PredictionServiceError> {
         let client = Self::get_client(prediction_config.get_address()).await?;
-        Ok(Self {
+        let mut service = Self {
             camera,
             client,
             prediction_delay: prediction_config.get_prediction_delay_ms(),
-        })
+            class_labels: Vec::new(),
+        };
+        let labels = service.get_labels().await?;
+        service.class_labels = labels.class_labels;
+        Ok(service)
     }
 
     async fn get_client(
@@ -47,7 +68,7 @@ impl PredictionService {
     ) -> Result<YoloServiceClient<Channel>, PredictionServiceError> {
         let mut retry_delay = Duration::from_millis(50);
         let max_retry_delay = Duration::from_secs(1);
-        let max_retries = 5;
+        let max_retries = 10;
         let mut retry_count = 0;
 
         loop {
@@ -73,6 +94,14 @@ impl PredictionService {
             sleep(retry_delay).await;
             retry_delay = (retry_delay * 2).min(max_retry_delay);
             retry_count += 1;
+        }
+    }
+
+    pub async fn get_labels(&mut self) -> Result<YoloClassLabels, PredictionServiceError> {
+        let request = Request::new(Empty {});
+        match self.client.get_yolo_class_labels(request).await {
+            Ok(response) => Ok(response.into_inner()),
+            Err(e) => Err(PredictionServiceError::GrpcRequestFailed(e)),
         }
     }
 
@@ -113,9 +142,40 @@ impl PredictionService {
 
             match self.client.predict(request).await {
                 Ok(response) => {
-                    let predictions = response.into_inner().detections;
+                    let detections = response.into_inner().detections;
                     let mut pred_lock = self.camera.predictions.lock().await;
-                    *pred_lock = predictions;
+                    let labeled_detections: Vec<BoundingBoxWithLabels> = detections
+                        .into_iter()
+                        .map(|bbox: BoundingBox| {
+                            if let Some(color_label) = self.class_labels.get(bbox.class_id as usize)
+                            {
+                                BoundingBoxWithLabels {
+                                    x1: bbox.x1,
+                                    y1: bbox.y1,
+                                    x2: bbox.x2,
+                                    y2: bbox.y2,
+                                    class_label: color_label.label.clone(),
+                                    red: color_label.red,
+                                    green: color_label.green,
+                                    blue: color_label.blue,
+                                    confidence: bbox.confidence,
+                                }
+                            } else {
+                                BoundingBoxWithLabels {
+                                    x1: bbox.x1,
+                                    y1: bbox.y1,
+                                    x2: bbox.x2,
+                                    y2: bbox.y2,
+                                    class_label: format!("Unknown class {}", bbox.class_id),
+                                    red: 0,
+                                    green: 0,
+                                    blue: 0,
+                                    confidence: bbox.confidence,
+                                }
+                            }
+                        })
+                        .collect();
+                    *pred_lock = labeled_detections;
                 }
                 Err(e) => {
                     tracing::error!("gRPC request failed: {:?}", e);

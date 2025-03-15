@@ -2,6 +2,7 @@ mod inference_service;
 mod model_service;
 mod ort_service;
 mod server;
+mod state;
 
 pub mod config;
 

@@ -1,2 +1,5 @@
 server:
   port: 50051
+labels:
+  labels_dir: labels
+  labels_file: yolov8_labels.txt
