@@ -1,11 +1,6 @@
 use crate::prediction::{BoundingBoxWithLabels, PredictionService, PredictionServiceError};
-use opencv::{
-    core,
-    core::{Mat, Vector},
-    imgcodecs, imgproc,
-    prelude::*,
-    videoio,
-};
+use cv_utils::{CvUtilsError, ImageConverter};
+use opencv::{core::Mat, prelude::*, videoio};
 use std::{sync::Arc, time::Duration};
 use thiserror::Error;
 use tokio::{
@@ -19,12 +14,12 @@ pub enum CameraError {
     OpenCameraFailed(opencv::Error),
     #[error("Failed to read frame: {0}")]
     ReadFrameFailed(opencv::Error),
-    #[error("Failed to encode frame: {0}")]
-    EncodeFrameFailed(opencv::Error),
     #[error("OpenCV error: {0}")]
     OpenCvError(opencv::Error),
     #[error("Prediction service error: {0}")]
     PredictionError(#[from] PredictionServiceError),
+    #[error("Cv utils error: {0}")]
+    OpenCvUtilsError(#[from] CvUtilsError),
 }
 
 impl From<opencv::Error> for CameraError {
@@ -60,46 +55,15 @@ impl Camera {
     pub async fn get_annotated_frame(&self) -> Result<Option<Vec<u8>>, CameraError> {
         let mut cam = self.capture.lock().await;
         let mut frame = Mat::default();
+
         if cam.read(&mut frame).map_err(CameraError::ReadFrameFailed)? && !frame.empty() {
             let predictions = self.predictions.lock().await;
-            for bbox in predictions.iter() {
-                let x1 = bbox.x1 as i32;
-                let y1 = bbox.y1 as i32;
-                let x2 = bbox.x2 as i32;
-                let y2 = bbox.y2 as i32;
-                let label = format!("{}: {:.2}", bbox.class_label, bbox.confidence);
 
-                // OpenCV uses BGR
-                let color =
-                    core::Scalar::new(bbox.blue as f64, bbox.green as f64, bbox.red as f64, 0.0);
+            ImageConverter::annotate_frame(&mut frame, &predictions)?;
 
-                imgproc::rectangle(
-                    &mut frame,
-                    core::Rect::new(x1, y1, x2 - x1, y2 - y1),
-                    color,
-                    2,
-                    imgproc::LINE_8,
-                    0,
-                )
-                .map_err(CameraError::from)?;
+            let image_data = ImageConverter::encode_mat_to_jpg(&frame)?;
 
-                imgproc::put_text(
-                    &mut frame,
-                    &label,
-                    core::Point::new(x1, y1 - 5),
-                    imgproc::FONT_HERSHEY_SIMPLEX,
-                    0.5,
-                    color,
-                    1,
-                    imgproc::LINE_AA,
-                    false,
-                )
-                .map_err(CameraError::from)?;
-            }
-            let mut buf = Vector::<u8>::new();
-            imgcodecs::imencode(".jpg", &frame, &mut buf, &Vector::new())
-                .map_err(CameraError::EncodeFrameFailed)?;
-            return Ok(Some(buf.into()));
+            return Ok(Some(image_data));
         }
         Ok(None)
     }
@@ -154,15 +118,84 @@ impl CameraPoller {
             return Ok(());
         }
 
-        let mut buf = opencv::core::Vector::<u8>::new();
-        opencv::imgcodecs::imencode(".jpg", &frame, &mut buf, &opencv::core::Vector::new())
-            .map_err(crate::camera::CameraError::EncodeFrameFailed)?;
-        let image_data: Vec<u8> = buf.into();
+        let image_data = ImageConverter::encode_mat_to_jpg(&frame)?;
 
         let detections = prediction_service.predict(image_data).await?;
         let mut pred_lock = camera.predictions.lock().await;
         *pred_lock = detections;
 
         Ok(())
+    }
+}
+
+pub mod cv_utils {
+    use opencv::{
+        core::{Mat, Point, Rect, Scalar, Vector},
+        imgcodecs, imgproc,
+    };
+    use thiserror::Error;
+
+    #[derive(Error, Debug)]
+    pub enum CvUtilsError {
+        #[error("Failed to encode frame: {0}")]
+        EncodeFrameFailed(opencv::Error),
+        #[error("OpenCV error: {0}")]
+        OpenCvError(opencv::Error),
+    }
+
+    impl From<opencv::Error> for CvUtilsError {
+        fn from(err: opencv::Error) -> Self {
+            CvUtilsError::OpenCvError(err)
+        }
+    }
+
+    pub struct ImageConverter;
+
+    impl ImageConverter {
+        pub fn encode_mat_to_jpg(mat: &Mat) -> Result<Vec<u8>, CvUtilsError> {
+            let mut buf = Vector::<u8>::new();
+            imgcodecs::imencode(".jpg", mat, &mut buf, &Vector::new())
+                .map_err(CvUtilsError::EncodeFrameFailed)?;
+            Ok(buf.into())
+        }
+
+        pub fn annotate_frame(
+            frame: &mut Mat,
+            bboxes: &[crate::prediction::BoundingBoxWithLabels],
+        ) -> Result<(), CvUtilsError> {
+            for bbox in bboxes {
+                let x1 = bbox.x1 as i32;
+                let y1 = bbox.y1 as i32;
+                let x2 = bbox.x2 as i32;
+                let y2 = bbox.y2 as i32;
+                let label = format!("{}: {:.2}", bbox.class_label, bbox.confidence);
+
+                let color = Scalar::new(bbox.blue as f64, bbox.green as f64, bbox.red as f64, 0.0);
+
+                imgproc::rectangle(
+                    frame,
+                    Rect::new(x1, y1, x2 - x1, y2 - y1),
+                    color,
+                    2,
+                    imgproc::LINE_8,
+                    0,
+                )
+                .map_err(CvUtilsError::from)?;
+
+                imgproc::put_text(
+                    frame,
+                    &label,
+                    Point::new(x1, y1 - 5),
+                    imgproc::FONT_HERSHEY_SIMPLEX,
+                    0.5,
+                    color,
+                    1,
+                    imgproc::LINE_AA,
+                    false,
+                )
+                .map_err(CvUtilsError::from)?;
+            }
+            Ok(())
+        }
     }
 }
