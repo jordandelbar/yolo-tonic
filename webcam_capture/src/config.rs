@@ -6,6 +6,7 @@ pub struct Config {
     #[serde(deserialize_with = "deserialize_log_level")]
     pub log_level: LogLevel,
     pub prediction_service: PredictionServiceConfig,
+    pub camera_polling: CameraPollingConfig,
 }
 
 fn deserialize_log_level<'de, D>(deserializer: D) -> Result<LogLevel, D::Error>
@@ -42,8 +43,6 @@ impl ServerConfig {
 pub struct PredictionServiceConfig {
     pub host: String,
     pub port: u16,
-    #[serde(default = "default_prediction_fps")]
-    pub prediction_fps: u64,
 }
 
 fn default_prediction_fps() -> u64 {
@@ -54,7 +53,19 @@ impl PredictionServiceConfig {
     pub fn get_address(&self) -> String {
         format!("http://{}:{}", self.host, self.port)
     }
+}
 
+#[derive(Clone, Deserialize, Debug)]
+pub struct CameraPollingConfig {
+    #[serde(default = "default_prediction_fps")]
+    pub prediction_fps: u64,
+    pub max_retries: u64,
+    pub initial_delay: u64,
+    pub backoff_factor: u32,
+    pub max_consecutive_failures: u64,
+}
+
+impl CameraPollingConfig {
     pub fn get_prediction_delay_ms(&self) -> u64 {
         fps_to_delay_ms(self.prediction_fps)
     }

@@ -1,4 +1,5 @@
 use crate::bounding_box::BoundingBoxWithLabels;
+use crate::config::CameraPollingConfig;
 use crate::cv_utils::{CvUtilsError, ImageConverter};
 use crate::prediction::{PredictionService, PredictionServiceError};
 use opencv::{core::Mat, prelude::*, videoio};
@@ -74,18 +75,26 @@ pub struct CameraPoller {
     camera: Arc<Camera>,
     prediction_service: Arc<PredictionService>,
     poll_interval_ms: u64,
+    max_retries: u64,
+    initial_delay: u64,
+    backoff_factor: u32,
+    max_consecutive_failures: u64,
 }
 
 impl CameraPoller {
     pub fn new(
         camera: Arc<Camera>,
         prediction_service: Arc<PredictionService>,
-        poll_interval_ms: u64,
+        camera_polling_config: &CameraPollingConfig,
     ) -> Self {
         Self {
             camera,
             prediction_service,
-            poll_interval_ms,
+            poll_interval_ms: camera_polling_config.get_prediction_delay_ms(),
+            max_retries: camera_polling_config.max_retries,
+            initial_delay: camera_polling_config.initial_delay,
+            backoff_factor: camera_polling_config.backoff_factor,
+            max_consecutive_failures: camera_polling_config.max_consecutive_failures,
         }
     }
 
@@ -93,14 +102,13 @@ impl CameraPoller {
         let camera = self.camera.clone();
         let prediction_service = self.prediction_service.clone();
         let poll_interval_ms = self.poll_interval_ms;
+        let max_retries = self.max_retries;
+        let initial_delay = Duration::from_millis(self.initial_delay);
+        let backoff_factor = self.backoff_factor;
+        let mut consecutive_failures = 0;
+        let max_consecutive_failures = self.max_consecutive_failures;
 
         tokio::spawn(async move {
-            let max_retries = 3;
-            let initial_delay = Duration::from_millis(100);
-            let backoff_factor = 2;
-            let mut consecutive_failures = 0;
-            let max_consecutive_failures = 50;
-
             loop {
                 tokio::select! {
                     result = Self::poll_and_predict(&camera, prediction_service.clone()) => {

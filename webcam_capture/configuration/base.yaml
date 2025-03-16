@@ -2,3 +2,8 @@ server:
   port: 8000
 prediction_service:
   port: 50051
+camera_polling:
+  max_retries: 3
+  initial_delay: 100
+  backoff_factor: 2
+  max_consecutive_failures: 50

@@ -23,11 +23,8 @@ pub async fn start_app(config: Config) -> Result<(), Box<dyn Error>> {
         }
     };
 
-    let camera_poller = CameraPoller::new(
-        camera.clone(),
-        prediction_service,
-        config.prediction_service.get_prediction_delay_ms(),
-    );
+    let camera_poller =
+        CameraPoller::new(camera.clone(), prediction_service, &config.camera_polling);
 
     let server = HttpServer::new(camera.clone(), &config.server).await?;
 
