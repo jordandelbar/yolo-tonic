@@ -15,23 +15,27 @@ pub async fn start_app(config: Config) -> Result<(), Box<dyn Error>> {
         }
     };
 
+    let prediction_service = match PredictionService::new(&config.prediction_service).await {
+        Ok(service) => Arc::new(service),
+        Err(e) => {
+            tracing::error!("Failed to initialize prediction service: {:?}", e);
+            return Err(Box::new(e));
+        }
+    };
+
     let server = HttpServer::new(camera.clone(), &config.server).await?;
 
-    let (shutdown_tx, mut prediction_shutdown_rx) = broadcast::channel(1);
+    let (shutdown_tx, _) = broadcast::channel(1);
     let server_shutdown_rx = shutdown_tx.subscribe();
+    let camera_shutdown_rx = shutdown_tx.subscribe();
 
-    let mut prediction_service =
-        PredictionService::new(camera.clone(), &config.prediction_service).await?;
-
-    let prediction_handle = tokio::spawn(async move {
-        tokio::select! {
-            _ = prediction_service.run() => {},
-            _ = prediction_shutdown_rx.recv() => {
-                tracing::info!("Prediction worker received shutdown signal.");
-            }
-        }
-        tracing::info!("Prediction worker stopped.");
-    });
+    Camera::start_polling(
+        camera.clone(),
+        prediction_service,
+        config.prediction_service.get_prediction_delay_ms(),
+        camera_shutdown_rx,
+    )
+    .await;
 
     let server_handle = tokio::spawn(async move { server.run(server_shutdown_rx).await });
 
@@ -39,7 +43,6 @@ pub async fn start_app(config: Config) -> Result<(), Box<dyn Error>> {
     tracing::info!("Shutdown signal received, starting graceful shutdown.");
 
     let _ = shutdown_tx.send(());
-    let _ = prediction_handle.await;
     let _ = server_handle.await;
 
     Ok(())

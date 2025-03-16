@@ -1,11 +1,10 @@
-use crate::{camera::Camera, config::PredictionServiceConfig};
-use opencv::{core, imgcodecs, prelude::*};
-use std::{
-    sync::Arc,
-    time::{Duration, SystemTime, UNIX_EPOCH},
-};
+use crate::config::PredictionServiceConfig;
+use std::time::{SystemTime, UNIX_EPOCH};
 use thiserror::Error;
-use tokio::time::{sleep, timeout};
+use tokio::{
+    sync::Mutex,
+    time::{sleep, timeout, Duration},
+};
 use tonic::{
     transport::{Channel, Error},
     Request, Status,
@@ -13,7 +12,6 @@ use tonic::{
 use tracing::instrument;
 use yolo_proto::{
     yolo_service_client::YoloServiceClient, BoundingBox, ColorLabel, Empty, ImageFrame,
-    YoloClassLabels,
 };
 
 #[derive(Error, Debug)]
@@ -40,26 +38,34 @@ pub struct BoundingBoxWithLabels {
 }
 
 pub struct PredictionService {
-    camera: Arc<Camera>,
-    client: YoloServiceClient<Channel>,
-    prediction_delay: u64,
-    class_labels: Vec<ColorLabel>,
+    client: Mutex<YoloServiceClient<Channel>>,
+    class_labels: Mutex<Vec<ColorLabel>>,
 }
 
 impl PredictionService {
     pub async fn new(
-        camera: Arc<Camera>,
         prediction_config: &PredictionServiceConfig,
     ) -> Result<Self, PredictionServiceError> {
         let client = Self::get_client(prediction_config.get_address()).await?;
-        let mut service = Self {
-            camera,
-            client,
-            prediction_delay: prediction_config.get_prediction_delay_ms(),
-            class_labels: Vec::new(),
+
+        let service = Self {
+            client: Mutex::new(client),
+            class_labels: Mutex::new(Vec::new()),
         };
-        let labels = service.get_labels().await?;
-        service.class_labels = labels.class_labels;
+
+        // We need the client to initialize the labels
+        {
+            let mut client = service.client.lock().await;
+            let request = Request::new(Empty {});
+            let response = client.get_yolo_class_labels(request).await?;
+            let labels = response.into_inner();
+
+            drop(client);
+
+            let mut class_labels = service.class_labels.lock().await;
+            *class_labels = labels.class_labels;
+        }
+
         Ok(service)
     }
 
@@ -71,7 +77,7 @@ impl PredictionService {
         let max_retries = 10;
         let mut retry_count = 0;
 
-        loop {
+        while retry_count < max_retries {
             match timeout(
                 Duration::from_secs(1),
                 YoloServiceClient::connect(address.clone()),
@@ -87,100 +93,67 @@ impl PredictionService {
                 }
             }
 
-            if retry_count >= max_retries {
-                return Err(PredictionServiceError::MaxRetriesExceeded);
-            }
-
-            sleep(retry_delay).await;
-            retry_delay = (retry_delay * 2).min(max_retry_delay);
             retry_count += 1;
+            let jitter = rand::random::<f32>() * 0.2 + 0.9;
+            sleep(retry_delay.mul_f32(jitter)).await;
+            retry_delay = (retry_delay * 2).min(max_retry_delay);
         }
+
+        Err(PredictionServiceError::MaxRetriesExceeded)
     }
 
-    pub async fn get_labels(&mut self) -> Result<YoloClassLabels, PredictionServiceError> {
-        let request = Request::new(Empty {});
-        match self.client.get_yolo_class_labels(request).await {
-            Ok(response) => Ok(response.into_inner()),
-            Err(e) => Err(PredictionServiceError::GrpcRequestFailed(e)),
-        }
-    }
+    #[instrument(skip(self, image_data))]
+    pub async fn predict(
+        &self,
+        image_data: Vec<u8>,
+    ) -> Result<Vec<BoundingBoxWithLabels>, PredictionServiceError> {
+        let mut client = self.client.lock().await;
 
-    #[instrument(skip(self))]
-    pub async fn run(&mut self) {
-        loop {
-            sleep(Duration::from_millis(self.prediction_delay)).await;
+        let timestamp = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_millis() as i64;
 
-            let frame = match self.camera.capture_frame().await {
-                Ok(frame) if !frame.empty() => {
-                    let mut buf = core::Vector::<u8>::new();
-                    if let Err(e) =
-                        imgcodecs::imencode(".jpg", &frame, &mut buf, &core::Vector::new())
-                    {
-                        tracing::error!("Failed to encode frame: {:?}", e);
-                        continue;
+        let request = Request::new(ImageFrame {
+            image_data,
+            timestamp,
+        });
+
+        let response = client.predict(request).await?;
+        let detections = response.into_inner().detections;
+        let class_labels = self.class_labels.lock().await;
+
+        let labeled_detections: Vec<BoundingBoxWithLabels> = detections
+            .into_iter()
+            .map(|bbox: BoundingBox| {
+                if let Some(color_label) = class_labels.get(bbox.class_id as usize) {
+                    BoundingBoxWithLabels {
+                        x1: bbox.x1,
+                        y1: bbox.y1,
+                        x2: bbox.x2,
+                        y2: bbox.y2,
+                        class_label: color_label.label.clone(),
+                        red: color_label.red,
+                        green: color_label.green,
+                        blue: color_label.blue,
+                        confidence: bbox.confidence,
                     }
-                    buf.into()
+                } else {
+                    BoundingBoxWithLabels {
+                        x1: bbox.x1,
+                        y1: bbox.y1,
+                        x2: bbox.x2,
+                        y2: bbox.y2,
+                        class_label: format!("Unknown class {}", bbox.class_id),
+                        red: 0,
+                        green: 0,
+                        blue: 0,
+                        confidence: bbox.confidence,
+                    }
                 }
-                Ok(_) => {
-                    continue;
-                }
-                Err(e) => {
-                    tracing::error!("Failed to read frame: {:?}", e);
-                    continue;
-                }
-            };
+            })
+            .collect();
 
-            let timestamp = SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap()
-                .as_millis() as i64;
-
-            let request = Request::new(ImageFrame {
-                image_data: frame,
-                timestamp,
-            });
-
-            match self.client.predict(request).await {
-                Ok(response) => {
-                    let detections = response.into_inner().detections;
-                    let mut pred_lock = self.camera.predictions.lock().await;
-                    let labeled_detections: Vec<BoundingBoxWithLabels> = detections
-                        .into_iter()
-                        .map(|bbox: BoundingBox| {
-                            if let Some(color_label) = self.class_labels.get(bbox.class_id as usize)
-                            {
-                                BoundingBoxWithLabels {
-                                    x1: bbox.x1,
-                                    y1: bbox.y1,
-                                    x2: bbox.x2,
-                                    y2: bbox.y2,
-                                    class_label: color_label.label.clone(),
-                                    red: color_label.red,
-                                    green: color_label.green,
-                                    blue: color_label.blue,
-                                    confidence: bbox.confidence,
-                                }
-                            } else {
-                                BoundingBoxWithLabels {
-                                    x1: bbox.x1,
-                                    y1: bbox.y1,
-                                    x2: bbox.x2,
-                                    y2: bbox.y2,
-                                    class_label: format!("Unknown class {}", bbox.class_id),
-                                    red: 0,
-                                    green: 0,
-                                    blue: 0,
-                                    confidence: bbox.confidence,
-                                }
-                            }
-                        })
-                        .collect();
-                    *pred_lock = labeled_detections;
-                }
-                Err(e) => {
-                    tracing::error!("gRPC request failed: {:?}", e);
-                }
-            }
-        }
+        Ok(labeled_detections)
     }
 }
