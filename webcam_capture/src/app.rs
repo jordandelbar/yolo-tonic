@@ -1,4 +1,4 @@
-use crate::camera::Camera;
+use crate::camera::{Camera, CameraPoller};
 use crate::config::Config;
 use crate::prediction::PredictionService;
 use crate::server::HttpServer;
@@ -23,20 +23,19 @@ pub async fn start_app(config: Config) -> Result<(), Box<dyn Error>> {
         }
     };
 
+    let camera_poller = CameraPoller::new(
+        camera.clone(),
+        prediction_service,
+        config.prediction_service.get_prediction_delay_ms(),
+    );
+
     let server = HttpServer::new(camera.clone(), &config.server).await?;
 
     let (shutdown_tx, _) = broadcast::channel(1);
     let server_shutdown_rx = shutdown_tx.subscribe();
     let camera_shutdown_rx = shutdown_tx.subscribe();
 
-    Camera::start_polling(
-        camera.clone(),
-        prediction_service,
-        config.prediction_service.get_prediction_delay_ms(),
-        camera_shutdown_rx,
-    )
-    .await;
-
+    let _ = camera_poller.run(camera_shutdown_rx).await;
     let server_handle = server.run(server_shutdown_rx).await?;
 
     shutdown_signal().await;

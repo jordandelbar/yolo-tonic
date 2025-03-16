@@ -10,7 +10,6 @@ use std::{sync::Arc, time::Duration};
 use thiserror::Error;
 use tokio::{
     sync::{broadcast, Mutex},
-    task::JoinHandle,
     time::sleep,
 };
 
@@ -38,7 +37,6 @@ impl From<opencv::Error> for CameraError {
 pub struct Camera {
     pub capture: Mutex<videoio::VideoCapture>,
     pub predictions: Mutex<Vec<BoundingBoxWithLabels>>,
-    polling_task: Mutex<Option<JoinHandle<()>>>,
 }
 
 impl Camera {
@@ -49,57 +47,7 @@ impl Camera {
         Ok(Self {
             capture: Mutex::new(capture),
             predictions: Mutex::new(vec![]),
-            polling_task: Mutex::new(None),
         })
-    }
-
-    pub async fn start_polling(
-        self_arc: Arc<Self>,
-        prediction_service: Arc<PredictionService>,
-        poll_interval_ms: u64,
-        mut shutdown_rx: broadcast::Receiver<()>,
-    ) {
-        let camera_arc = self_arc.clone();
-
-        let task = tokio::spawn(async move {
-            loop {
-                tokio::select! {
-                    _ = camera_arc.poll_and_predict(prediction_service.clone()) => {},
-                    _ = shutdown_rx.recv() => {
-                        tracing::info!("Camera polling received shutdown signal");
-                        break;
-                    }
-                }
-
-                sleep(Duration::from_millis(poll_interval_ms)).await;
-            }
-
-            tracing::info!("Camera polling stopped");
-        });
-
-        let mut polling_task = self_arc.polling_task.lock().await;
-        *polling_task = Some(task);
-    }
-
-    async fn poll_and_predict(
-        &self,
-        prediction_service: Arc<PredictionService>,
-    ) -> Result<(), CameraError> {
-        let frame = self.capture_frame().await?;
-        if frame.empty() {
-            return Ok(());
-        }
-
-        let mut buf = core::Vector::<u8>::new();
-        imgcodecs::imencode(".jpg", &frame, &mut buf, &core::Vector::new())
-            .map_err(CameraError::EncodeFrameFailed)?;
-        let image_data: Vec<u8> = buf.into();
-
-        let detections = prediction_service.predict(image_data).await?;
-        let mut pred_lock = self.predictions.lock().await;
-        *pred_lock = detections;
-
-        Ok(())
     }
 
     pub async fn capture_frame(&self) -> Result<Mat, CameraError> {
@@ -154,5 +102,67 @@ impl Camera {
             return Ok(Some(buf.into()));
         }
         Ok(None)
+    }
+}
+
+pub struct CameraPoller {
+    camera: Arc<Camera>,
+    prediction_service: Arc<PredictionService>,
+    poll_interval_ms: u64,
+}
+
+impl CameraPoller {
+    pub fn new(
+        camera: Arc<Camera>,
+        prediction_service: Arc<PredictionService>,
+        poll_interval_ms: u64,
+    ) -> Self {
+        Self {
+            camera,
+            prediction_service,
+            poll_interval_ms,
+        }
+    }
+
+    pub async fn run(&self, mut shutdown_rx: broadcast::Receiver<()>) {
+        let camera = self.camera.clone();
+        let prediction_service = self.prediction_service.clone();
+        let poll_interval_ms = self.poll_interval_ms;
+
+        tokio::spawn(async move {
+            loop {
+                tokio::select! {
+                    _ = Self::poll_and_predict(&camera, prediction_service.clone()) => {},
+                    _ = shutdown_rx.recv() => {
+                        tracing::info!("Camera polling received shutdown signal");
+                        break;
+                    }
+                }
+
+                sleep(Duration::from_millis(poll_interval_ms)).await;
+            }
+            tracing::info!("Camera polling stopped");
+        });
+    }
+
+    async fn poll_and_predict(
+        camera: &Arc<crate::camera::Camera>,
+        prediction_service: Arc<PredictionService>,
+    ) -> Result<(), crate::camera::CameraError> {
+        let frame = camera.capture_frame().await?;
+        if frame.empty() {
+            return Ok(());
+        }
+
+        let mut buf = opencv::core::Vector::<u8>::new();
+        opencv::imgcodecs::imencode(".jpg", &frame, &mut buf, &opencv::core::Vector::new())
+            .map_err(crate::camera::CameraError::EncodeFrameFailed)?;
+        let image_data: Vec<u8> = buf.into();
+
+        let detections = prediction_service.predict(image_data).await?;
+        let mut pred_lock = camera.predictions.lock().await;
+        *pred_lock = detections;
+
+        Ok(())
     }
 }
