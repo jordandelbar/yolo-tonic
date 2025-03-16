@@ -95,9 +95,54 @@ impl CameraPoller {
         let poll_interval_ms = self.poll_interval_ms;
 
         tokio::spawn(async move {
+            let max_retries = 3;
+            let initial_delay = Duration::from_millis(100);
+            let backoff_factor = 2;
+            let mut consecutive_failures = 0;
+            let max_consecutive_failures = 50;
+
             loop {
                 tokio::select! {
-                    _ = Self::poll_and_predict(&camera, prediction_service.clone()) => {},
+                    result = Self::poll_and_predict(&camera, prediction_service.clone()) => {
+                        match result {
+                            Ok(_) => {
+                                consecutive_failures = 0;
+                            },
+                            Err(ref err) => {
+                                tracing::error!("Error during polling: {:?}", err);
+                                let mut retry_delay = initial_delay;
+                                let mut retry_successful = false;
+                                for retry_count in 0..max_retries {
+                                    tracing::warn!(
+                                        "Retrying poll (attempt {}/{}) on consecutive failures: {}/{}",
+                                        retry_count + 1,
+                                        max_retries,
+                                        consecutive_failures,
+                                        max_consecutive_failures
+                                    );
+                                    sleep(retry_delay).await;
+
+                                    let retry_result = Self::poll_and_predict(&camera, prediction_service.clone()).await;
+                                    if retry_result.is_ok() {
+                                        tracing::info!("Retry successful");
+                                        retry_successful = true;
+                                        break;
+                                    } else {
+                                        tracing::error!("Retry failed: {:?}", retry_result);
+                                        retry_delay *= backoff_factor;
+                                    }
+                                }
+                                if !retry_successful {
+                                    consecutive_failures += 1;
+                                    tracing::error!("Max number of retries reached, skipping current poll interval");
+                                }
+                                if consecutive_failures >= max_consecutive_failures {
+                                    tracing::error!("Persistent failure detected. Exiting polling loop");
+                                    break;
+                                }
+                            }
+                        }
+                    },
                     _ = shutdown_rx.recv() => {
                         tracing::info!("Camera polling received shutdown signal");
                         break;
