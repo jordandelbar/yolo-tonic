@@ -1,3 +1,4 @@
+use crate::bounding_box::BoundingBoxWithLabels;
 use crate::config::PredictionServiceConfig;
 use std::time::{SystemTime, UNIX_EPOCH};
 use thiserror::Error;
@@ -22,19 +23,6 @@ pub enum PredictionServiceError {
     MaxRetriesExceeded,
     #[error("gRPC request failed: {0}")]
     GrpcRequestFailed(#[from] Status),
-}
-
-#[derive(Debug)]
-pub struct BoundingBoxWithLabels {
-    pub x1: f32,
-    pub y1: f32,
-    pub x2: f32,
-    pub y2: f32,
-    pub class_label: String,
-    pub red: u32,
-    pub green: u32,
-    pub blue: u32,
-    pub confidence: f32,
 }
 
 pub struct PredictionService {
