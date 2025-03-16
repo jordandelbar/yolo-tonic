@@ -6,7 +6,7 @@ pub struct Config {
     #[serde(deserialize_with = "deserialize_log_level")]
     pub log_level: LogLevel,
     pub prediction_service: PredictionServiceConfig,
-    pub camera_polling: CameraPollingConfig,
+    pub prediction_polling: PredictionPollingConfig,
 }
 
 fn deserialize_log_level<'de, D>(deserializer: D) -> Result<LogLevel, D::Error>
@@ -56,7 +56,7 @@ impl PredictionServiceConfig {
 }
 
 #[derive(Clone, Deserialize, Debug)]
-pub struct CameraPollingConfig {
+pub struct PredictionPollingConfig {
     #[serde(default = "default_prediction_fps")]
     pub prediction_fps: u64,
     pub max_retries: u64,
@@ -65,7 +65,7 @@ pub struct CameraPollingConfig {
     pub max_consecutive_failures: u64,
 }
 
-impl CameraPollingConfig {
+impl PredictionPollingConfig {
     pub fn get_prediction_delay_ms(&self) -> u64 {
         fps_to_delay_ms(self.prediction_fps)
     }
