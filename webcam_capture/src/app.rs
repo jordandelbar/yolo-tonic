@@ -37,7 +37,7 @@ pub async fn start_app(config: Config) -> Result<(), Box<dyn Error>> {
     )
     .await;
 
-    let server_handle = tokio::spawn(async move { server.run(server_shutdown_rx).await });
+    let server_handle = server.run(server_shutdown_rx).await?;
 
     shutdown_signal().await;
     tracing::info!("Shutdown signal received, starting graceful shutdown.");

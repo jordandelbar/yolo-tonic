@@ -1,7 +1,7 @@
 use crate::{camera::Camera, config::ServerConfig, routes::api_routes, stream::VideoStream};
 use axum::Router;
 use std::sync::Arc;
-use tokio::{net::TcpListener, sync::broadcast::Receiver};
+use tokio::{net::TcpListener, sync::broadcast::Receiver, task::JoinHandle};
 
 pub struct HttpServer {
     router: Router,
@@ -19,17 +19,27 @@ impl HttpServer {
         Ok(Self { router, listener })
     }
 
-    pub async fn run(self, mut shutdown_rx: Receiver<()>) -> anyhow::Result<()> {
+    pub async fn run(
+        self,
+        mut shutdown_rx: Receiver<()>,
+    ) -> anyhow::Result<JoinHandle<anyhow::Result<()>>> {
         tracing::info!("Starting app on {}", &self.listener.local_addr().unwrap());
 
-        let server = axum::serve(self.listener, self.router);
+        let listener = self.listener;
+        let router = self.router;
 
-        tokio::select! {
-            result = server.with_graceful_shutdown(async move {shutdown_rx.recv().await.ok();}) => {
-                result?;
+        let handle = tokio::spawn(async move {
+            let server = axum::serve(listener, router);
+
+            tokio::select! {
+                result = server.with_graceful_shutdown(async move {shutdown_rx.recv().await.ok();}) => {
+                    result?;
+                }
             }
-        }
 
-        Ok(())
+            Ok(())
+        });
+
+        Ok(handle)
     }
 }
