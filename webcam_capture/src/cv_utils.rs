@@ -1,4 +1,5 @@
 use crate::bounding_box::BoundingBoxWithLabels;
+use axum::body::Bytes;
 use opencv::{
     core::{Mat, Point, Rect, Scalar, Vector},
     imgcodecs, imgproc,
@@ -11,6 +12,8 @@ pub enum CvUtilsError {
     EncodeFrameFailed(opencv::Error),
     #[error("OpenCV error: {0}")]
     OpenCvError(opencv::Error),
+    #[error("OpenCV decode error: {0}")]
+    OpenCvDecodeError(opencv::Error),
 }
 
 impl From<opencv::Error> for CvUtilsError {
@@ -22,6 +25,12 @@ impl From<opencv::Error> for CvUtilsError {
 pub struct ImageConverter;
 
 impl ImageConverter {
+    pub fn bytes_to_mat(bytes: Bytes) -> Result<Mat, CvUtilsError> {
+        let mat = imgcodecs::imdecode(&Vector::from_slice(&bytes), imgcodecs::IMREAD_COLOR)
+            .map_err(CvUtilsError::OpenCvDecodeError)?;
+        Ok(mat)
+    }
+
     pub fn encode_mat_to_jpg(mat: &Mat) -> Result<Vec<u8>, CvUtilsError> {
         let mut buf = Vector::<u8>::new();
         imgcodecs::imencode(".jpg", mat, &mut buf, &Vector::new())

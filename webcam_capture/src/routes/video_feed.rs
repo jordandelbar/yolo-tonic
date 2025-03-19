@@ -1,4 +1,4 @@
-use crate::stream::{VideoStream, VideoStreamError};
+use crate::{server::SharedState, stream::VideoStreamError};
 use axum::{
     body::Body,
     extract::State,
@@ -9,11 +9,9 @@ use tracing::instrument;
 
 const CONTENT_TYPE: &str = "multipart/x-mixed-replace; boundary=frame";
 
-#[instrument(skip(video_stream))]
-pub async fn video_feed(
-    State(video_stream): State<VideoStream>,
-) -> Result<Response, VideoStreamError> {
-    let stream = video_stream.generate_stream();
+#[instrument(skip(state))]
+pub async fn video_feed(State(state): State<SharedState>) -> Result<Response, VideoStreamError> {
+    let stream = state.video_stream.generate_stream();
 
     let body = Body::from_stream(stream);
 

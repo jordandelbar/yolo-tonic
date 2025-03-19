@@ -1,6 +1,5 @@
 use crate::camera::Camera;
 use crate::config::Config;
-use crate::prediction::{PredictionPoller, PredictionService};
 use crate::server::HttpServer;
 
 use std::{error::Error, sync::Arc};
@@ -15,27 +14,11 @@ pub async fn start_app(config: Config) -> Result<(), Box<dyn Error>> {
         }
     };
 
-    let prediction_service = match PredictionService::new(&config.prediction_service).await {
-        Ok(service) => Arc::new(service),
-        Err(e) => {
-            tracing::error!("Failed to initialize prediction service: {:?}", e);
-            return Err(Box::new(e));
-        }
-    };
-
-    let prediction_poller = PredictionPoller::new(
-        camera.clone(),
-        prediction_service,
-        &config.prediction_polling,
-    );
-
-    let server = HttpServer::new(camera.clone(), &config.server).await?;
+    let server = HttpServer::new(camera.clone(), &config).await?;
 
     let (shutdown_tx, _) = broadcast::channel(1);
     let server_shutdown_rx = shutdown_tx.subscribe();
-    let camera_shutdown_rx = shutdown_tx.subscribe();
 
-    let _ = prediction_poller.run(camera_shutdown_rx).await;
     let server_handle = server.run(server_shutdown_rx).await?;
 
     shutdown_signal().await;
