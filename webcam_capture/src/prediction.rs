@@ -1,7 +1,9 @@
-use crate::bounding_box::BoundingBoxWithLabels;
-use crate::camera::{Camera, CameraError};
-use crate::config::{PredictionPollingConfig, PredictionServiceConfig};
-use crate::cv_utils::{CvUtilsError, ImageConverter};
+use crate::{
+    bounding_box::BoundingBoxWithLabels,
+    camera::{Camera, CameraError},
+    config::{PredictionPollingConfig, PredictionServiceConfig},
+    cv_utils::{CvUtilsError, ImageConverter},
+};
 use opencv::prelude::*;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};

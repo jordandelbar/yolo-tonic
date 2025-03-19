@@ -1,6 +1,4 @@
-use crate::camera::Camera;
-use crate::config::Config;
-use crate::server::HttpServer;
+use crate::{camera::Camera, config::Config, server::HttpServer};
 
 use std::{error::Error, sync::Arc};
 use tokio::{signal, sync::broadcast};

@@ -1,5 +1,7 @@
-use crate::bounding_box::BoundingBoxWithLabels;
-use crate::cv_utils::{CvUtilsError, ImageConverter};
+use crate::{
+    bounding_box::BoundingBoxWithLabels,
+    cv_utils::{CvUtilsError, ImageConverter},
+};
 use opencv::{core::Mat, prelude::*, videoio};
 use thiserror::Error;
 use tokio::sync::Mutex;

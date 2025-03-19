@@ -1,5 +1,4 @@
-use crate::camera::Camera;
-use crate::camera::CameraError;
+use crate::camera::{Camera, CameraError};
 use bytes::Bytes;
 use futures::stream;
 use std::{sync::Arc, time::Duration};

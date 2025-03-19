@@ -1,5 +1,7 @@
-use crate::config::{ModelConfig, Validatable};
-use crate::model_service::ModelService;
+use crate::{
+    config::{ModelConfig, Validatable},
+    model_service::ModelService,
+};
 use image::{imageops::FilterType, GenericImageView};
 use ndarray::{s, Array, Axis, Ix4};
 use ort::{
