@@ -1,18 +1,18 @@
-use crate::{camera::Camera, config::Config, server::HttpServer};
+use crate::{config::Config, prediction::PredictionService, server::HttpServer};
 
 use std::{error::Error, sync::Arc};
 use tokio::{signal, sync::broadcast};
 
 pub async fn start_app(config: Config) -> Result<(), Box<dyn Error>> {
-    let camera: Arc<Camera> = match Camera::new().await {
-        Ok(cam) => Arc::new(cam),
+    let prediction_service = match PredictionService::new(&config.prediction_service).await {
+        Ok(service) => Arc::new(service),
         Err(e) => {
-            tracing::error!("Failed to initialize camera: {:?}", e);
-            return Err(Box::new(e));
+            tracing::error!("Failed to initialize prediction service: {:?}", e);
+            return Err(e.into());
         }
     };
 
-    let server = HttpServer::new(camera.clone(), &config).await?;
+    let server = HttpServer::new(prediction_service.clone(), &config).await?;
 
     let (shutdown_tx, _) = broadcast::channel(1);
     let server_shutdown_rx = shutdown_tx.subscribe();

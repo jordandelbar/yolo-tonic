@@ -1,4 +1,4 @@
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct BoundingBoxWithLabels {
     pub x1: f32,
     pub y1: f32,

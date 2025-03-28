@@ -14,7 +14,7 @@ use axum::{
 
 pub fn api_routes() -> Router<SharedState> {
     Router::new()
-        .route("/video_feed", get(video_feed))
+        .route("/ws/video_feed", get(video_feed))
         .route("/predict_image", post(predict_image))
         .route("/health", get(healthcheck))
 }

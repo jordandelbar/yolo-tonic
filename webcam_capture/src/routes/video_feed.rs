@@ -1,34 +1,48 @@
-use crate::{server::SharedState, stream::VideoStreamError};
+use crate::{camera::Camera, server::SharedState};
 use axum::{
-    body::Body,
-    extract::State,
-    http::{header, StatusCode},
-    response::{IntoResponse, Response},
+    extract::{
+        ws::{Message, WebSocket, WebSocketUpgrade},
+        State,
+    },
+    response::IntoResponse,
 };
-use tracing::instrument;
+use futures::TryStreamExt;
 
-const CONTENT_TYPE: &str = "multipart/x-mixed-replace; boundary=frame";
-
-#[instrument(skip(state))]
-pub async fn video_feed(State(state): State<SharedState>) -> Result<Response, VideoStreamError> {
-    let stream = state.video_stream.generate_stream();
-
-    let body = Body::from_stream(stream);
-
-    let response = Response::builder()
-        .header(header::CONTENT_TYPE, CONTENT_TYPE)
-        .body(body)
-        .map_err(|e| VideoStreamError::HttpBuilderError(e.to_string()))?;
-
-    Ok(response)
+pub async fn video_feed(
+    ws: WebSocketUpgrade,
+    State(state): State<SharedState>,
+) -> impl IntoResponse {
+    ws.on_upgrade(move |socket| handle_socket(socket, state))
 }
 
-impl IntoResponse for VideoStreamError {
-    fn into_response(self) -> Response {
-        let status = match self {
-            VideoStreamError::Camera(_) => StatusCode::INTERNAL_SERVER_ERROR,
-            VideoStreamError::HttpBuilderError(_) => StatusCode::INTERNAL_SERVER_ERROR,
-        };
-        (status, self.to_string()).into_response()
+async fn handle_socket(mut socket: WebSocket, state: SharedState) {
+    let camera = match Camera::new(0, state.prediction_service.clone()) {
+        Ok(cam) => cam,
+        Err(e) => {
+            tracing::error!("Could not create camera: {:?}", e);
+            return;
+        }
+    };
+
+    let (frame_thread, prediction_thread) = match camera.start().await {
+        Ok(threads) => threads,
+        Err(e) => {
+            tracing::error!("Camera start error: {:?}", e);
+            return;
+        }
+    };
+
+    let mut stream = camera.subscribe();
+
+    while let Some(Ok(frame)) = stream.try_next().await.transpose() {
+        if socket.send(Message::Binary(frame.into())).await.is_err() {
+            tracing::error!("Failed to send frame to client");
+            break;
+        }
     }
+
+    camera.stop();
+    let _ = frame_thread.await;
+    let _ = prediction_thread.await;
+    tracing::info!("Client disconnected");
 }

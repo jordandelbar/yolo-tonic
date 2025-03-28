@@ -16,13 +16,14 @@
                 display: flex;
                 justify-content: center;
                 align-items: center;
-                min-height: 100vh;
-                background: #f0f0f0;
+                height: 100vh;
+                background-color: #f0f0f0;
                 color: #333;
                 text-align: center;
             }
 
             .container {
+                position: relative;
                 background: #fff;
                 padding: 20px;
                 border-radius: 8px;
@@ -30,60 +31,152 @@
                 max-width: 90%;
             }
 
+            .header {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 10px;
+                margin-bottom: 12px;
+            }
+
             h1 {
                 font-size: 1.6em;
-                margin-bottom: 12px;
                 color: #444;
             }
 
-            #video-stream {
-                max-width: 100%;
-                max-height: 75vh;
-                width: auto;
+            #statusIndicator {
+                width: 15px;
+                height: 15px;
+                border-radius: 50%;
+                background-color: #f44336;
+                transition: background-color 0.3s ease;
+            }
+
+            #statusIndicator.connected {
+                background-color: #4caf50;
+            }
+
+            #videoFeed {
+                width: 100%;
                 height: auto;
-                border-radius: 5px;
-                border: 1px solid #ddd;
-                display: none;
-            }
-
-            .message {
-                font-size: 1em;
-                margin-top: 10px;
-                color: #666;
-            }
-
-            .error {
-                color: #cc0000;
+                transition: opacity 0.2s ease-in-out;
             }
         </style>
     </head>
     <body>
         <div class="container">
-            <h1>YOLO Prediction Live</h1>
-            <p class="message" id="status-message">Loading video stream...</p>
-            <img
-                id="video-stream"
-                src="http://localhost:8000/video_feed"
-                alt="YOLO Video Stream"
-            />
+            <div class="header">
+                <h1>YOLO Prediction Live</h1>
+                <div id="statusIndicator" title="Connection Status"></div>
+            </div>
+            <img id="videoFeed" src="" alt="Video Stream" />
         </div>
 
         <script>
-            const img = document.getElementById("video-stream");
-            const statusMessage = document.getElementById("status-message");
+            class WebSocketVideoStream {
+                constructor(url) {
+                    this.socket = null;
+                    this.url = url;
+                    this.videoFeed = document.getElementById("videoFeed");
+                    this.statusIndicator =
+                        document.getElementById("statusIndicator");
+                    this.frameQueue = [];
+                    this.isProcessingFrame = false;
+                    this.reconnectAttempts = 0;
+                    this.maxReconnectAttempts = 5;
 
-            img.onload = () => {
-                statusMessage.style.display = "none";
-                img.style.display = "block";
-                console.log("YOLO stream is live.");
-            };
+                    this.init();
+                }
 
-            img.addEventListener("error", () => {
-                console.error("Error loading YOLO stream.");
-                statusMessage.textContent =
-                    "Error: Unable to load video stream.";
-                statusMessage.classList.add("error");
-            });
+                init() {
+                    this.connect();
+                }
+
+                connect() {
+                    this.socket = new WebSocket(this.url);
+
+                    this.socket.onopen = () => {
+                        console.log("WebSocket connection established");
+                        this.statusIndicator.classList.add("connected");
+                        this.reconnectAttempts = 0;
+                    };
+
+                    this.socket.onmessage = (event) => {
+                        this.queueFrame(event.data);
+                    };
+
+                    this.socket.onclose = (event) => {
+                        console.log("WebSocket connection closed");
+                        this.statusIndicator.classList.remove("connected");
+                        this.reconnect();
+                    };
+
+                    this.socket.onerror = (error) => {
+                        console.error("WebSocket error:", error);
+                        this.statusIndicator.classList.remove("connected");
+                    };
+                }
+
+                queueFrame(blob) {
+                    this.frameQueue.push(blob);
+                    this.processFrameQueue();
+                }
+
+                async processFrameQueue() {
+                    if (this.isProcessingFrame || this.frameQueue.length === 0)
+                        return;
+
+                    this.isProcessingFrame = true;
+                    const blob = this.frameQueue.shift();
+
+                    try {
+                        const url = URL.createObjectURL(blob);
+
+                        this.videoFeed.style.opacity = 0;
+
+                        await new Promise((resolve) => {
+                            this.videoFeed.onload = () => {
+                                URL.revokeObjectURL(this.videoFeed.src);
+                                this.videoFeed.style.opacity = 1;
+                                resolve();
+                            };
+                            this.videoFeed.src = url;
+                        });
+                    } catch (error) {
+                        console.error("Frame processing error:", error);
+                    } finally {
+                        this.isProcessingFrame = false;
+
+                        if (this.frameQueue.length > 0) {
+                            this.processFrameQueue();
+                        }
+                    }
+                }
+
+                reconnect() {
+                    if (this.reconnectAttempts < this.maxReconnectAttempts) {
+                        this.reconnectAttempts++;
+                        const delay =
+                            Math.pow(2, this.reconnectAttempts) * 1000;
+
+                        console.log(
+                            `Attempting to reconnect in ${delay / 1000} seconds...`,
+                        );
+
+                        setTimeout(() => {
+                            this.connect();
+                        }, delay);
+                    } else {
+                        console.error(
+                            "Max reconnect attempts reached. Please refresh the page.",
+                        );
+                    }
+                }
+            }
+
+            const videoStream = new WebSocketVideoStream(
+                "ws://localhost:8000/ws/video_feed",
+            );
         </script>
     </body>
 </html>

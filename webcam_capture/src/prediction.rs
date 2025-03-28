@@ -1,15 +1,10 @@
 use crate::{
-    bounding_box::BoundingBoxWithLabels,
-    camera::{Camera, CameraError},
-    config::{PredictionPollingConfig, PredictionServiceConfig},
-    cv_utils::{CvUtilsError, ImageConverter},
+    bounding_box::BoundingBoxWithLabels, config::PredictionServiceConfig, cv_utils::CvUtilsError,
 };
-use opencv::prelude::*;
-use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 use thiserror::Error;
 use tokio::{
-    sync::{broadcast, Mutex},
+    sync::Mutex,
     time::{sleep, timeout, Duration},
 };
 use tonic::{
@@ -31,8 +26,6 @@ pub enum PredictionServiceError {
     GrpcRequestFailed(#[from] Status),
     #[error("Cv utils error: {0}")]
     OpenCvUtilsError(#[from] CvUtilsError),
-    #[error("Camera error: {0}")]
-    PredictionCameraError(#[from] CameraError),
 }
 
 pub struct PredictionService {
@@ -153,116 +146,5 @@ impl PredictionService {
             .collect();
 
         Ok(labeled_detections)
-    }
-}
-
-pub struct PredictionPoller {
-    camera: Arc<Camera>,
-    prediction_service: Arc<PredictionService>,
-    poll_interval_ms: u64,
-    max_retries: u64,
-    initial_delay: u64,
-    backoff_factor: u32,
-    max_consecutive_failures: u64,
-}
-
-impl PredictionPoller {
-    pub fn new(
-        camera: Arc<Camera>,
-        prediction_service: Arc<PredictionService>,
-        prediction_polling_config: &PredictionPollingConfig,
-    ) -> Self {
-        Self {
-            camera,
-            prediction_service,
-            poll_interval_ms: prediction_polling_config.get_prediction_delay_ms(),
-            max_retries: prediction_polling_config.max_retries,
-            initial_delay: prediction_polling_config.initial_delay,
-            backoff_factor: prediction_polling_config.backoff_factor,
-            max_consecutive_failures: prediction_polling_config.max_consecutive_failures,
-        }
-    }
-
-    pub async fn run(&self, mut shutdown_rx: broadcast::Receiver<()>) {
-        let camera = self.camera.clone();
-        let prediction_service = self.prediction_service.clone();
-        let poll_interval_ms = self.poll_interval_ms;
-        let max_retries = self.max_retries;
-        let initial_delay = Duration::from_millis(self.initial_delay);
-        let backoff_factor = self.backoff_factor;
-        let mut consecutive_failures = 0;
-        let max_consecutive_failures = self.max_consecutive_failures;
-
-        tokio::spawn(async move {
-            loop {
-                tokio::select! {
-                    result = Self::poll_and_predict(&camera, prediction_service.clone()) => {
-                        match result {
-                            Ok(_) => {
-                                consecutive_failures = 0;
-                            },
-                            Err(ref err) => {
-                                tracing::error!("Error during polling: {:?}", err);
-                                let mut retry_delay = initial_delay;
-                                let mut retry_successful = false;
-                                for retry_count in 0..max_retries {
-                                    tracing::warn!(
-                                        "Retrying poll (attempt {}/{}) on consecutive failures: {}/{}",
-                                        retry_count + 1,
-                                        max_retries,
-                                        consecutive_failures,
-                                        max_consecutive_failures
-                                    );
-                                    sleep(retry_delay).await;
-
-                                    let retry_result = Self::poll_and_predict(&camera, prediction_service.clone()).await;
-                                    if retry_result.is_ok() {
-                                        tracing::info!("Retry successful");
-                                        retry_successful = true;
-                                        break;
-                                    } else {
-                                        tracing::error!("Retry failed: {:?}", retry_result);
-                                        retry_delay *= backoff_factor;
-                                    }
-                                }
-                                if !retry_successful {
-                                    consecutive_failures += 1;
-                                    tracing::error!("Max number of retries reached, skipping current poll interval");
-                                }
-                                if consecutive_failures >= max_consecutive_failures {
-                                    tracing::error!("Persistent failure detected. Exiting polling loop");
-                                    break;
-                                }
-                            }
-                        }
-                    },
-                    _ = shutdown_rx.recv() => {
-                        tracing::info!("Camera polling received shutdown signal");
-                        break;
-                    }
-                }
-
-                sleep(Duration::from_millis(poll_interval_ms)).await;
-            }
-            tracing::info!("Camera polling stopped");
-        });
-    }
-
-    async fn poll_and_predict(
-        camera: &Arc<Camera>,
-        prediction_service: Arc<PredictionService>,
-    ) -> Result<(), PredictionServiceError> {
-        let frame = camera.capture_frame().await?;
-        if frame.empty() {
-            return Ok(());
-        }
-
-        let image_data = ImageConverter::encode_mat_to_jpg(&frame)?;
-
-        let detections = prediction_service.predict(image_data).await?;
-        let mut pred_lock = camera.predictions.lock().await;
-        *pred_lock = detections;
-
-        Ok(())
     }
 }

@@ -13,8 +13,9 @@ name = "webcam_capture"
 [dependencies]
 yolo_proto = { path = "../yolo_proto" }
 tokio = { version = "1", features = ["full"] }
+tokio-stream = { version = "0.1", features = ["sync"] }
 rand = "0.9"
-axum = "0.8"
+axum = { version = "0.8", features = ["ws", "tokio"] }
 opencv = "0.94"
 futures = "0.3"
 anyhow = "1"
