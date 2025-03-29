@@ -1,4 +1,8 @@
-use crate::{config::Config, prediction::PredictionService, routes::api_routes};
+use crate::{
+    config::{CameraConfig, Config},
+    prediction::PredictionService,
+    routes::api_routes,
+};
 use axum::Router;
 use std::sync::Arc;
 use tokio::{net::TcpListener, sync::broadcast::Receiver, task::JoinHandle};
@@ -6,6 +10,7 @@ use tokio::{net::TcpListener, sync::broadcast::Receiver, task::JoinHandle};
 #[derive(Clone)]
 pub struct SharedState {
     pub prediction_service: Arc<PredictionService>,
+    pub camera_config: CameraConfig,
 }
 
 pub struct HttpServer {
@@ -20,7 +25,10 @@ impl HttpServer {
     ) -> anyhow::Result<Self> {
         let addr = config.server.get_address();
 
-        let app_state = SharedState { prediction_service };
+        let app_state = SharedState {
+            prediction_service,
+            camera_config: config.camera.clone(),
+        };
 
         let router = Router::new().merge(api_routes()).with_state(app_state);
 

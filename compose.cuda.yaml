@@ -5,8 +5,8 @@ services:
       - "8000:8000"
     environment:
       APP_ENVIRONMENT: "production"
-      APP_VIDEO_STREAM_FPS: 60
-      APP_PREDICTION_SERVICE__PREDICTION_FPS: 60
+      WC_CAMERA__STREAM_FPS: 60
+      WC_CAMERA__PREDICTION_FPS: 60
     devices:
       - /dev/video0:/dev/video0
     depends_on:
@@ -18,10 +18,10 @@ services:
       - "50051:50051"
     environment:
       APP_ENVIRONMENT: "production"
-      APP_MODEL__ONNX_FILE: "yolov8m.onnx"
-      APP_MODEL__NUM_INSTANCES: "5"
-      APP_MODEL__MODEL_DIR: "/app/models"
-      APP_MODEL__MIN_PROBABILITY: 0.55
+      YP_MODEL__ONNX_FILE: "yolov8m.onnx"
+      YP_MODEL__NUM_INSTANCES: "5"
+      YP_MODEL__MODEL_DIR: "/app/models"
+      YP_MODEL__MIN_PROBABILITY: 0.55
 
     runtime: nvidia
     deploy:

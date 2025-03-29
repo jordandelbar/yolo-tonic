@@ -6,7 +6,7 @@ pub struct Config {
     #[serde(deserialize_with = "deserialize_log_level")]
     pub log_level: LogLevel,
     pub prediction_service: PredictionServiceConfig,
-    pub prediction_polling: PredictionPollingConfig,
+    pub camera: CameraConfig,
 }
 
 fn deserialize_log_level<'de, D>(deserializer: D) -> Result<LogLevel, D::Error>
@@ -21,21 +21,11 @@ where
 pub struct ServerConfig {
     pub host: String,
     pub port: u16,
-    #[serde(default = "default_video_stream_fps")]
-    pub video_stream_fps: u64,
-}
-
-fn default_video_stream_fps() -> u64 {
-    60
 }
 
 impl ServerConfig {
     pub fn get_address(&self) -> String {
         format!("{}:{}", self.host, self.port)
-    }
-
-    pub fn get_stream_delay_ms(&self) -> u64 {
-        fps_to_delay_ms(self.video_stream_fps)
     }
 }
 
@@ -45,10 +35,6 @@ pub struct PredictionServiceConfig {
     pub port: u16,
 }
 
-fn default_prediction_fps() -> u64 {
-    20
-}
-
 impl PredictionServiceConfig {
     pub fn get_address(&self) -> String {
         format!("http://{}:{}", self.host, self.port)
@@ -56,18 +42,32 @@ impl PredictionServiceConfig {
 }
 
 #[derive(Clone, Deserialize, Debug)]
-pub struct PredictionPollingConfig {
+pub struct CameraConfig {
+    #[serde(default = "default_stream_fps")]
+    pub stream_fps: u64,
     #[serde(default = "default_prediction_fps")]
     pub prediction_fps: u64,
-    pub max_retries: u64,
-    pub initial_delay: u64,
-    pub backoff_factor: u32,
-    pub max_consecutive_failures: u64,
 }
 
-impl PredictionPollingConfig {
+fn default_stream_fps() -> u64 {
+    60
+}
+
+fn default_prediction_fps() -> u64 {
+    20
+}
+
+fn fps_to_delay_ms(fps: u64) -> u64 {
+    (1000.0 / fps as f64).round() as u64
+}
+
+impl CameraConfig {
     pub fn get_prediction_delay_ms(&self) -> u64 {
         fps_to_delay_ms(self.prediction_fps)
+    }
+
+    pub fn get_stream_delay_ms(&self) -> u64 {
+        fps_to_delay_ms(self.stream_fps)
     }
 }
 
@@ -131,10 +131,6 @@ impl TryFrom<String> for LogLevel {
     }
 }
 
-fn fps_to_delay_ms(fps: u64) -> u64 {
-    (1000.0 / fps as f64).round() as u64
-}
-
 pub fn get_configuration() -> Result<Config, config::ConfigError> {
     let base_path = std::env::current_dir().expect("Failed to determine the current directory");
     let configuration_directory = base_path.join("configuration");
@@ -152,7 +148,7 @@ pub fn get_configuration() -> Result<Config, config::ConfigError> {
             configuration_directory.join(format!("{}.yaml", environment.as_str())),
         ))
         .add_source(
-            config::Environment::with_prefix("APP")
+            config::Environment::with_prefix("WC")
                 .prefix_separator("_")
                 .separator("__"),
         )

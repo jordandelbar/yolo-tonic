@@ -156,7 +156,7 @@ pub fn get_configuration() -> Result<Config, config::ConfigError> {
             configuration_directory.join(format!("{}.yaml", environment.as_str())),
         ))
         .add_source(
-            config::Environment::with_prefix("APP")
+            config::Environment::with_prefix("YP")
                 .prefix_separator("_")
                 .separator("__"),
         )

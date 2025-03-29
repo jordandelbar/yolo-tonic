@@ -1,5 +1,6 @@
 use crate::{
-    bounding_box::BoundingBoxWithLabels, cv_utils::ImageConverter, prediction::PredictionService,
+    bounding_box::BoundingBoxWithLabels, config::CameraConfig, cv_utils::ImageConverter,
+    prediction::PredictionService,
 };
 use opencv::prelude::*;
 use std::{
@@ -32,12 +33,15 @@ pub struct Camera {
     frame_sender: broadcast::Sender<Vec<u8>>,
     prediction_service: Arc<PredictionService>,
     predictions_lock: Arc<Mutex<Vec<BoundingBoxWithLabels>>>,
+    stream_delay: u64,
+    prediction_delay: u64,
 }
 
 impl Camera {
     pub fn new(
         device_id: i32,
         prediction_service: Arc<PredictionService>,
+        camera_config: &CameraConfig,
     ) -> Result<Self, CameraError> {
         let (tx, _) = broadcast::channel(32);
         Ok(Self {
@@ -47,6 +51,8 @@ impl Camera {
             frame_sender: tx,
             prediction_service,
             predictions_lock: Arc::new(Mutex::new(vec![])),
+            stream_delay: camera_config.get_stream_delay_ms(),
+            prediction_delay: camera_config.get_stream_delay_ms(),
         })
     }
 
@@ -66,6 +72,8 @@ impl Camera {
         let prediction_service = self.prediction_service.clone();
         let predictions_lock1 = self.predictions_lock.clone();
         let predictions_lock2 = self.predictions_lock.clone();
+        let stream_delay = self.stream_delay;
+        let prediction_delay = self.prediction_delay;
 
         let frame_thread = tokio::spawn(async move {
             let mut camera =
@@ -88,7 +96,7 @@ impl Camera {
                         }
                     }
                 }
-                tokio::time::sleep(Duration::from_millis(33)).await;
+                tokio::time::sleep(Duration::from_millis(stream_delay)).await;
             }
             drop(camera);
 
@@ -119,7 +127,7 @@ impl Camera {
                     }
                     Err(_) => break,
                 }
-                tokio::time::sleep(Duration::from_millis(50)).await;
+                tokio::time::sleep(Duration::from_millis(prediction_delay)).await;
             }
             Ok(())
         });
