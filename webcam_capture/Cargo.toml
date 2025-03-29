@@ -20,7 +20,7 @@ opencv = "0.94"
 futures = "0.3"
 anyhow = "1"
 bytes = "1"
-tonic = "0.12"
+tonic = "0.13"
 config = { version = "0.15", default-features = false, features = ["yaml"] }
 serde = { version = "1", features = ["derive"] }
 tracing = "0.1"

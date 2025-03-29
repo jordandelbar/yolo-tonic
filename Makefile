@@ -42,6 +42,9 @@ open-webpage:
 predict_image:
 	@cd scripts/predict_image && bash predict_image.sh
 
+grpc_ui:
+	@cd scripts/grpc_ui && bash run_grpc_ui.sh
+
 # Tear up
 services-down:
 	@docker compose down

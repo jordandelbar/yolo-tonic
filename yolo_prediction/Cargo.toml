@@ -13,8 +13,8 @@ name = "yolo_prediction"
 [dependencies]
 yolo_proto = { path = "../yolo_proto" }
 ort = { version = "2.0.0-rc.9", features = ["ndarray", "cuda"] }
-tonic = "0.12"
-tonic-reflection = "0.12"
+tonic = "0.13"
+tonic-reflection = "0.13"
 tokio = { version = "1", features = ["full"] }
 futures = "0.3"
 async-stream = "0.3"

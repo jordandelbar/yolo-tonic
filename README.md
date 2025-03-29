@@ -28,7 +28,7 @@ make all
 This will download the necessary images, runs the service and automatically
 open a webpage for visualization.
 
-## Running with CUDA support
+## ⚡ Running with CUDA support
 
 If you have [set up CUDA correctly](docs/setup/nvidia_docker.md), you can run the project with GPU acceleration by executing:
 
