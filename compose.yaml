@@ -11,6 +11,8 @@ services:
       - /dev/video0:/dev/video0
     depends_on:
       - yolo_prediction_service
+    networks:
+      - yolo_tonic_network
 
   yolo_prediction_service:
     image: ghcr.io/jordandelbar/yolo-tonic/yolo-prediction:latest
@@ -22,3 +24,9 @@ services:
       YP_MODEL__NUM_INSTANCES: "5"
       YP_MODEL__MODEL_DIR: "/app/models"
       YP_MODEL__MIN_PROBABILITY: 0.55
+    networks:
+      - yolo_tonic_network
+
+networks:
+  yolo_tonic_network:
+    name: yolo_tonic_network

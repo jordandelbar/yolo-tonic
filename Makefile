@@ -39,6 +39,9 @@ open-webpage:
 	elif command -v start > /dev/null; then start index.html; \
 	else echo "No suitable command found to open the file."; fi
 
+predict_image:
+	@cd scripts/predict_image && bash predict_image.sh
+
 # Tear up
 services-down:
 	@docker compose down

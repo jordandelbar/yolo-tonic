@@ -2,10 +2,7 @@
 
 ## 📝 Overview
 
-This project implements real-time object detection using a YOLO v8 model, a Rust gRPC service (Tonic + Ort)
-for inference, and an Axum-based middleware that streams video from a webcam,
-collects predictions, and serves them via Http.
-A simple HTML page is available to visualize the detections live from the webcam.
+This project implements a real-time object detection pipeline using a YOLO v8 model. A Rust-based gRPC service (using Tonic and Ort) handles inference, while an Axum-based middleware streams video from a webcam, collects predictions, and serves them via WebSocket. Additionally, a simple HTML page is provided for live visualization of the detections, and a predict_image POST endpoint allows direct inference on JPEG images.
 
 ![Alt text](./docs/images/sophie.png)
 

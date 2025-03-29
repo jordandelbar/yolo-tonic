@@ -11,6 +11,8 @@ services:
       - /dev/video0:/dev/video0
     depends_on:
       - yolo_prediction_service
+    networks:
+      - yolo_tonic_network_cuda
 
   yolo_prediction_service:
     image: ghcr.io/jordandelbar/yolo-tonic/yolo-prediction-cuda:latest
@@ -31,3 +33,9 @@ services:
             - driver: nvidia
               count: all
               capabilities: [gpu]
+    networks:
+      - yolo_tonic_network_cuda
+
+networks:
+  yolo_tonic_network_cuda:
+    name: yolo_tonic_network_cuda

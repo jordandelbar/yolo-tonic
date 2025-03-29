@@ -65,7 +65,7 @@ impl PredictionService {
     ) -> Result<YoloServiceClient<Channel>, PredictionServiceError> {
         let mut retry_delay = Duration::from_millis(50);
         let max_retry_delay = Duration::from_secs(1);
-        let max_retries = 10;
+        let max_retries = 20;
         let mut retry_count = 0;
 
         while retry_count < max_retries {
@@ -80,7 +80,7 @@ impl PredictionService {
                     tracing::error!("Failed to connect to gRPC server: {:?}", e);
                 }
                 Err(_) => {
-                    tracing::error!("Connection timeout");
+                    tracing::error!("Inference service gRPC connection timeout");
                 }
             }
 
