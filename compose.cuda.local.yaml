@@ -25,7 +25,7 @@ services:
     environment:
       APP_ENVIRONMENT: "production"
       YP_MODEL__ONNX_FILE: "yolov8m.onnx"
-      YP_MODEL__NUM_INSTANCES: "5"
+      YP_MODEL__NUM_INSTANCES: 8
       YP_MODEL__MODEL_DIR: "/app/models"
       YP_MODEL__MIN_PROBABILITY: 0.55
 

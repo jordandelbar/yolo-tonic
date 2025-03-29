@@ -3,15 +3,16 @@ use crate::{
     prediction::PredictionService,
 };
 use opencv::prelude::*;
-use std::{
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc,
-    },
-    time::Duration,
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
 };
 use thiserror::Error;
-use tokio::sync::{broadcast, Mutex};
+use tokio::{
+    sync::{broadcast, Mutex},
+    task::JoinHandle,
+    time::{sleep, Duration, Instant},
+};
 use tokio_stream::wrappers::BroadcastStream;
 
 #[derive(Error, Debug)]
@@ -60,8 +61,8 @@ impl Camera {
         &self,
     ) -> Result<
         (
-            tokio::task::JoinHandle<Result<(), CameraError>>,
-            tokio::task::JoinHandle<Result<(), CameraError>>,
+            JoinHandle<Result<(), CameraError>>,
+            JoinHandle<Result<(), CameraError>>,
         ),
         CameraError,
     > {
@@ -96,7 +97,7 @@ impl Camera {
                         }
                     }
                 }
-                tokio::time::sleep(Duration::from_millis(stream_delay)).await;
+                sleep(Duration::from_millis(stream_delay)).await;
             }
             drop(camera);
 
@@ -108,18 +109,24 @@ impl Camera {
             let mut rx = frame_sender_clone.subscribe();
             while prediction_running.load(Ordering::Relaxed) {
                 match rx.recv().await {
-                    Ok(frame_data) => match prediction_service.predict(frame_data).await {
-                        Ok(predictions) => {
-                            let mut lock = predictions_lock2.lock().await;
-                            *lock = predictions;
+                    Ok(frame_data) => {
+                        let start = Instant::now();
+                        match prediction_service.predict(frame_data).await {
+                            Ok(predictions) => {
+                                let elapsed = start.elapsed().as_millis();
+                                tracing::debug!("Prediction service took {:?} ms", elapsed);
+
+                                let mut lock = predictions_lock2.lock().await;
+                                *lock = predictions;
+                            }
+                            Err(e) => {
+                                tracing::error!("Prediction error: {:?}", e);
+                                return Err(CameraError::Prediction(
+                                    "Error when trying to predict".to_string(),
+                                ));
+                            }
                         }
-                        Err(e) => {
-                            tracing::error!("Prediction error: {:?}", e);
-                            return Err(CameraError::Prediction(
-                                "Error when trying to predict".to_string(),
-                            ));
-                        }
-                    },
+                    }
                     Err(broadcast::error::RecvError::Lagged(lagged)) => {
                         tracing::warn!("Prediction thread lagged, dropped {} frames", lagged);
                         rx = frame_sender_clone.subscribe();
@@ -127,7 +134,7 @@ impl Camera {
                     }
                     Err(_) => break,
                 }
-                tokio::time::sleep(Duration::from_millis(prediction_delay)).await;
+                sleep(Duration::from_millis(prediction_delay)).await;
             }
             Ok(())
         });
