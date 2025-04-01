@@ -13,7 +13,7 @@ use tokio::{net::TcpListener, sync::broadcast::Receiver, task::JoinHandle};
 pub struct SharedState {
     pub prediction_service: Arc<PredictionService>,
     pub camera_config: CameraConfig,
-    pub metrics: Metrics,
+    pub metrics: Arc<Metrics>,
 }
 
 pub struct HttpServer {
@@ -28,7 +28,7 @@ impl HttpServer {
     ) -> anyhow::Result<Self> {
         let addr = config.server.get_address();
 
-        let metrics = Metrics::new();
+        let metrics = Arc::new(Metrics::new());
         let metrics_layer = HttpMetricsLayerBuilder::new().build();
 
         let app_state = SharedState {

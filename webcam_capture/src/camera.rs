@@ -36,7 +36,7 @@ pub struct Camera {
     predictions_lock: Arc<Mutex<Vec<BoundingBoxWithLabels>>>,
     stream_delay: u64,
     prediction_delay: u64,
-    metrics: Metrics,
+    metrics: Arc<Metrics>,
 }
 
 impl Camera {
@@ -44,7 +44,7 @@ impl Camera {
         device_id: i32,
         prediction_service: Arc<PredictionService>,
         camera_config: &CameraConfig,
-        metrics: Metrics,
+        metrics: Arc<Metrics>,
     ) -> Result<Self, CameraError> {
         let (tx, _) = broadcast::channel(32);
         Ok(Self {
