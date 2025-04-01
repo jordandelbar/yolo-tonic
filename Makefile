@@ -4,9 +4,11 @@
 
 # For local use
 download-model:
-	bash scripts/model_download/run.sh
-	mv yolov8m.onnx yolo_prediction/models
-	rm yolov8m.pt
+	cd scripts/model_download && \
+		uv sync --frozen && \
+	    bash run.sh && \
+	    mv yolov8m.onnx ../../yolo_prediction/models && \
+	    rm yolov8m.pt
 
 local-run-server:
 	@cd yolo_prediction && cargo run
