@@ -4,6 +4,7 @@ mod cv_utils;
 mod prediction;
 mod routes;
 mod server;
+mod telemetry;
 
 pub mod app;
 pub mod config;

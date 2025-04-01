@@ -1,6 +1,6 @@
 use crate::{
     bounding_box::BoundingBoxWithLabels, config::CameraConfig, cv_utils::ImageConverter,
-    prediction::PredictionService,
+    prediction::PredictionService, telemetry::Metrics,
 };
 use opencv::prelude::*;
 use std::sync::{
@@ -36,6 +36,7 @@ pub struct Camera {
     predictions_lock: Arc<Mutex<Vec<BoundingBoxWithLabels>>>,
     stream_delay: u64,
     prediction_delay: u64,
+    metrics: Metrics,
 }
 
 impl Camera {
@@ -43,6 +44,7 @@ impl Camera {
         device_id: i32,
         prediction_service: Arc<PredictionService>,
         camera_config: &CameraConfig,
+        metrics: Metrics,
     ) -> Result<Self, CameraError> {
         let (tx, _) = broadcast::channel(32);
         Ok(Self {
@@ -54,6 +56,7 @@ impl Camera {
             predictions_lock: Arc::new(Mutex::new(vec![])),
             stream_delay: camera_config.get_stream_delay_ms(),
             prediction_delay: camera_config.get_stream_delay_ms(),
+            metrics,
         })
     }
 
@@ -75,6 +78,7 @@ impl Camera {
         let predictions_lock2 = self.predictions_lock.clone();
         let stream_delay = self.stream_delay;
         let prediction_delay = self.prediction_delay;
+        let metrics = self.metrics.clone();
 
         let frame_thread = tokio::spawn(async move {
             let mut camera =
@@ -114,7 +118,7 @@ impl Camera {
                         match prediction_service.predict(frame_data).await {
                             Ok(predictions) => {
                                 let elapsed = start.elapsed().as_millis();
-                                tracing::debug!("Prediction service took {:?} ms", elapsed);
+                                metrics.record_prediction_duration(elapsed as u64, "camera");
 
                                 let mut lock = predictions_lock2.lock().await;
                                 *lock = predictions;
@@ -126,6 +130,7 @@ impl Camera {
                                 ));
                             }
                         }
+                        metrics.record_request("camera");
                     }
                     Err(broadcast::error::RecvError::Lagged(lagged)) => {
                         tracing::warn!("Prediction thread lagged, dropped {} frames", lagged);

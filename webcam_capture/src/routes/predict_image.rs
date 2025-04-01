@@ -9,6 +9,7 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use thiserror::Error;
+use tokio::time::Instant;
 use tracing::instrument;
 
 #[derive(Error, Debug)]
@@ -47,11 +48,17 @@ pub async fn predict_image(
     let mat = ImageConverter::bytes_to_mat(image_data.clone())
         .map_err(PredictImageError::OpenCvDecode)?;
 
+    let start = Instant::now();
     let predictions = state
         .prediction_service
         .predict(image_data.to_vec())
         .await
         .map_err(|e| PredictImageError::PredictionService(e.to_string()))?;
+    let elapsed = start.elapsed().as_millis();
+    state
+        .metrics
+        .record_prediction_duration(elapsed as u64, "predict_image");
+    state.metrics.record_request("predict_image");
 
     let mut annotated_mat = mat.clone();
 

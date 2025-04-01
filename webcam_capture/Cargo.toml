@@ -26,3 +26,9 @@ serde = { version = "1", features = ["derive"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["json", "env-filter"] }
 thiserror = "2"
+axum-otel-metrics = { version = "0.10" }
+opentelemetry = { version = "0.29", features = ["metrics"] }
+opentelemetry-otlp = { version = "0.29", features = ["metrics"] }
+opentelemetry-prometheus = { version = "0.29" }
+opentelemetry_sdk = "0.29"
+prometheus = "0.13"
