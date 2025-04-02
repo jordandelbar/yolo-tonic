@@ -15,7 +15,7 @@ services:
     depends_on:
       - yolo_prediction_service
     networks:
-      - yolo_tonic_network_cuda
+      - yolo_tonic_network
 
   yolo_prediction_service:
     image: ghcr.io/jordandelbar/yolo-tonic/yolo-prediction-cuda:latest
@@ -37,7 +37,7 @@ services:
               count: all
               capabilities: [gpu]
     networks:
-      - yolo_tonic_network_cuda
+      - yolo_tonic_network
 
   prometheus:
     extends:
@@ -46,4 +46,4 @@ services:
 
 networks:
   yolo_tonic_network_cuda:
-    name: yolo_tonic_network_cuda
+    name: yolo_tonic_network
