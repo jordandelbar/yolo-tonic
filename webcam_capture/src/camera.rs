@@ -1,6 +1,9 @@
 use crate::{
-    bounding_box::BoundingBoxWithLabels, config::CameraConfig, cv_utils::ImageConverter,
-    prediction::PredictionService, telemetry::Metrics,
+    bounding_box::BoundingBoxWithLabels,
+    config::CameraConfig,
+    cv_utils::{CvImage, CvUtilsError},
+    prediction::PredictionService,
+    telemetry::Metrics,
 };
 use opencv::prelude::*;
 use std::sync::{
@@ -24,7 +27,7 @@ pub enum CameraError {
     #[error("Prediction error: {0}")]
     Prediction(String),
     #[error("Image encode error: {0}")]
-    ImageEncode(crate::cv_utils::CvUtilsError),
+    ImageEncode(CvUtilsError),
 }
 
 pub struct Camera {
@@ -86,9 +89,9 @@ impl Camera {
                     .map_err(CameraError::OpenCamera)?;
 
             while camera_running.load(Ordering::Relaxed) {
-                let mut frame = Mat::default();
-                if camera.read(&mut frame).unwrap_or(false) {
-                    match process_frame(&frame, &predictions_lock1).await {
+                let mut image = CvImage::new();
+                if camera.read(&mut image.mat).unwrap_or(false) {
+                    match process_frame(image, &predictions_lock1).await {
                         Ok(annotated_frame) => {
                             if frame_sender.send(annotated_frame).is_err() {
                                 tracing::error!("Failed to send frame to prediction thread");
@@ -158,14 +161,14 @@ impl Camera {
 }
 
 async fn process_frame(
-    frame: &Mat,
+    mut image: CvImage,
     predictions_lock: &Arc<Mutex<Vec<BoundingBoxWithLabels>>>,
 ) -> Result<Vec<u8>, CameraError> {
-    let mut annotated_frame = frame.clone();
-    let preds = predictions_lock.lock().await.clone();
+    let predictions = predictions_lock.lock().await.clone();
 
-    ImageConverter::annotate_frame(&mut annotated_frame, &preds)
-        .map_err(|e| CameraError::FrameProcessing(e.to_string()))?;
-
-    ImageConverter::encode_mat_to_jpg(&annotated_frame).map_err(CameraError::ImageEncode)
+    image
+        .annotate(&predictions)
+        .map_err(|e| CameraError::FrameProcessing(e.to_string()))?
+        .to_jpg()
+        .map_err(CameraError::ImageEncode)
 }

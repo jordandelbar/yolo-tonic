@@ -1,9 +1,9 @@
 use crate::{
-    cv_utils::{CvUtilsError, ImageConverter},
+    cv_utils::{CvImage, CvUtilsError},
     server::SharedState,
 };
 use axum::{
-    body::Bytes,
+    body::{Body, Bytes},
     extract::State,
     http::{header, StatusCode},
     response::{IntoResponse, Response},
@@ -45,8 +45,8 @@ pub async fn predict_image(
     State(state): State<SharedState>,
     image_data: Bytes,
 ) -> Result<Response, PredictImageError> {
-    let mat = ImageConverter::bytes_to_mat(image_data.clone())
-        .map_err(PredictImageError::OpenCvDecode)?;
+    let mut image =
+        CvImage::from_bytes(image_data.clone()).map_err(PredictImageError::OpenCvDecode)?;
 
     let start = Instant::now();
     let predictions = state
@@ -60,15 +60,9 @@ pub async fn predict_image(
         .record_prediction_duration(elapsed as u64, "predict_image");
     state.metrics.record_request("predict_image");
 
-    let mut annotated_mat = mat.clone();
-
-    ImageConverter::annotate_frame(&mut annotated_mat, &predictions)?;
-
-    let annotated_image_data = ImageConverter::encode_mat_to_jpg(&annotated_mat)?;
-
     let response = Response::builder()
         .header(header::CONTENT_TYPE, "image/jpeg")
-        .body(axum::body::Body::from(annotated_image_data))
+        .body(Body::from(image.annotate(&predictions)?.to_jpg()?))
         .map_err(|e| PredictImageError::HttpBuilder(e.to_string()))?;
 
     Ok(response)
