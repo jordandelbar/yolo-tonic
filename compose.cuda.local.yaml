@@ -1,3 +1,6 @@
+include:
+  - base.yaml
+
 services:
   webcam_capture_app:
     build:
@@ -39,6 +42,11 @@ services:
               capabilities: [gpu]
     networks:
       - yolo_tonic_network_cuda
+
+  prometheus:
+    extends:
+      file: base.yaml
+      service: prometheus
 
 networks:
   yolo_tonic_network_cuda:

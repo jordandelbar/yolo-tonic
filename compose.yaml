@@ -1,3 +1,6 @@
+include:
+  - base.yaml
+
 services:
   webcam_capture_app:
     image: ghcr.io/jordandelbar/yolo-tonic/webcam-capture:latest
@@ -26,6 +29,11 @@ services:
       YP_MODEL__MIN_PROBABILITY: 0.55
     networks:
       - yolo_tonic_network
+
+  prometheus:
+    extends:
+      file: base.yaml
+      service: prometheus
 
 networks:
   yolo_tonic_network:
