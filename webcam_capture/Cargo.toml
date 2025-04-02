@@ -10,6 +10,12 @@ path = "src/lib.rs"
 path = "src/main.rs"
 name = "webcam_capture"
 
+[profile.performance]
+inherits = "release"
+lto = true
+codegen-units = 1
+panic = "abort"
+
 [dependencies]
 yolo_proto = { path = "../yolo_proto" }
 tokio = { version = "1", features = ["full"] }

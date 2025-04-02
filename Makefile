@@ -32,7 +32,7 @@ local-services-cuda-up:
 services-up:
 	@docker compose -f compose.yaml up -d
 
-services-up-cuda:
+services-cuda-up:
 	@docker compose -f compose.cuda.yaml up -d
 
 open-webpage:
@@ -49,7 +49,16 @@ grpc_ui:
 
 # Tear up
 services-down:
-	@docker compose down
+	@docker compose -f compose.yaml down
+
+services-cuda-down:
+	@docker compose -f compose.yaml down
+
+local-services-down:
+	@docker compose -f compose.local.yaml down
+
+local-services-cuda-down:
+	@docker compose -f compose.cuda.local.yaml down
 
 all: services-up open-webpage
 all-cuda: services-up-cuda open-webpage

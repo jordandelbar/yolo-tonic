@@ -10,6 +10,12 @@ path = "src/lib.rs"
 path = "src/main.rs"
 name = "yolo_prediction"
 
+[profile.performance]
+inherits = "release"
+lto = true
+codegen-units = 1
+panic = "abort"
+
 [dependencies]
 yolo_proto = { path = "../yolo_proto" }
 ort = { version = "2.0.0-rc.9", features = ["ndarray", "cuda"] }
