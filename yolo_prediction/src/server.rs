@@ -6,8 +6,7 @@ use crate::{
     state::{ServiceState, State},
 };
 use tokio::signal;
-use tonic::transport::server::Router;
-use tonic::transport::Server;
+use tonic::transport::{server::Router, Server};
 use yolo_proto::yolo_service_server::YoloServiceServer;
 
 pub struct GrpcServer {
@@ -22,9 +21,12 @@ impl GrpcServer {
             .register_encoded_file_descriptor_set(yolo_proto::FILE_DESCRIPTOR_SET)
             .build_v1alpha()
             .unwrap();
+        let (_, health_service) = tonic_health::server::health_reporter();
+
         let router = Server::builder()
             .add_service(YoloServiceServer::new(inference_service))
-            .add_service(reflection_service);
+            .add_service(reflection_service)
+            .add_service(health_service);
 
         Self {
             router,

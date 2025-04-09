@@ -2,8 +2,10 @@ use crate::{
     config::{CameraConfig, Config},
     prediction::PredictionService,
     routes::api_routes,
+    telemetry::Metrics,
 };
 use axum::Router;
+use axum_otel_metrics::HttpMetricsLayerBuilder;
 use std::sync::Arc;
 use tokio::{net::TcpListener, sync::broadcast::Receiver, task::JoinHandle};
 
@@ -11,6 +13,7 @@ use tokio::{net::TcpListener, sync::broadcast::Receiver, task::JoinHandle};
 pub struct SharedState {
     pub prediction_service: Arc<PredictionService>,
     pub camera_config: CameraConfig,
+    pub metrics: Arc<Metrics>,
 }
 
 pub struct HttpServer {
@@ -25,12 +28,19 @@ impl HttpServer {
     ) -> anyhow::Result<Self> {
         let addr = config.server.get_address();
 
+        let metrics = Arc::new(Metrics::new());
+        let metrics_layer = HttpMetricsLayerBuilder::new().build();
+
         let app_state = SharedState {
             prediction_service,
             camera_config: config.camera.clone(),
+            metrics,
         };
 
-        let router = Router::new().merge(api_routes()).with_state(app_state);
+        let router = Router::new()
+            .merge(api_routes())
+            .with_state(app_state)
+            .layer(metrics_layer);
 
         let listener = TcpListener::bind(addr).await?;
 

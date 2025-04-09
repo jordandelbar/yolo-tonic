@@ -5,8 +5,8 @@ use crate::{
 use image::{imageops::FilterType, GenericImageView};
 use ndarray::{s, Array, Axis, Ix4};
 use ort::{
-    execution_providers::CUDAExecutionProvider,
-    session::{Session, SessionOutputs},
+    execution_providers::TensorRTExecutionProvider,
+    session::{builder::GraphOptimizationLevel, Session, SessionOutputs},
 };
 use std::sync::{
     atomic::{AtomicUsize, Ordering},
@@ -61,12 +61,16 @@ pub struct OrtModelService {
 impl OrtModelService {
     pub fn new(model_config: &ModelConfig) -> Result<Self, Box<dyn std::error::Error>> {
         ort::init()
-            .with_execution_providers([CUDAExecutionProvider::default().build()])
+            .with_execution_providers([TensorRTExecutionProvider::default()
+                .with_engine_cache(true)
+                .build()])
             .commit()?;
         let num_instances = model_config.num_instances;
         let sessions = (0..num_instances)
             .map(|_| {
-                let session = Session::builder()?.commit_from_file(model_config.get_path())?;
+                let session = Session::builder()?
+                    .with_optimization_level(GraphOptimizationLevel::Level3)?
+                    .commit_from_file(model_config.get_path())?;
                 Ok(Arc::new(session))
             })
             .collect::<Result<Vec<_>, ort::Error>>()?;

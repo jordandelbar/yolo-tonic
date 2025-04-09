@@ -1,3 +1,6 @@
+include:
+  - base.yaml
+
 services:
   webcam_capture_app:
     build:
@@ -12,9 +15,10 @@ services:
     devices:
       - /dev/video0:/dev/video0
     depends_on:
-      - yolo_prediction_service
+      yolo_prediction_service:
+        condition: service_healthy
     networks:
-      - yolo_tonic_network_cuda
+      - yolo_tonic_network
 
   yolo_prediction_service:
     build:
@@ -38,8 +42,18 @@ services:
               count: all
               capabilities: [gpu]
     networks:
-      - yolo_tonic_network_cuda
+      - yolo_tonic_network
+
+  prometheus:
+    extends:
+      file: base.yaml
+      service: prometheus
+
+  grafana:
+    extends:
+      file: base.yaml
+      service: grafana
 
 networks:
-  yolo_tonic_network_cuda:
-    name: yolo_tonic_network_cuda
+  yolo_tonic_network:
+    name: yolo_tonic_network

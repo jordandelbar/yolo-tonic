@@ -17,6 +17,7 @@ RUN apt-get update && apt-get install -y \
     libprotobuf-dev \
     cmake \
     git \
+    wget \
     build-essential && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
@@ -34,7 +35,11 @@ WORKDIR /app/yolo_prediction
 
 RUN cargo build --release
 
-FROM nvidia/cuda:12.8.0-cudnn-devel-ubuntu22.04
+RUN GRPC_HEALTH_PROBE_VERSION=v0.4.13 && \
+    wget -qO/bin/grpc_health_probe https://github.com/grpc-ecosystem/grpc-health-probe/releases/download/${GRPC_HEALTH_PROBE_VERSION}/grpc_health_probe-linux-amd64 && \
+    chmod +x /bin/grpc_health_probe
+
+FROM nvcr.io/nvidia/tensorrt:25.03-py3
 
 WORKDIR /app
 
@@ -48,9 +53,14 @@ COPY --from=builder /app/onnxruntime/lib/* /usr/lib/
 
 COPY --from=builder /app/yolo_prediction/target/release/yolo_prediction /app/yolo_prediction
 COPY --from=builder /app/yolo_prediction/configuration/ /app/configuration
+COPY --from=builder /bin/grpc_health_probe /bin/grpc_health_probe
 COPY ./yolo_prediction/models/yolov8m.onnx /app/models/yolov8m.onnx
 COPY ./yolo_prediction/labels/yolov8_labels.txt /app/labels/yolov8_labels.txt
+COPY ./yolo_prediction/healthcheck.sh /app/healthcheck.sh
+RUN chmod +x /app/healthcheck.sh
 
 EXPOSE 50051
+
+HEALTHCHECK --interval=10s --timeout=5s --retries=60 CMD /app/healthcheck.sh
 
 CMD ["./yolo_prediction"]

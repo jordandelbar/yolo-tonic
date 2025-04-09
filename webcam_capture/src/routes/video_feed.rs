@@ -16,7 +16,12 @@ pub async fn video_feed(
 }
 
 async fn handle_socket(mut socket: WebSocket, state: SharedState) {
-    let camera = match Camera::new(0, state.prediction_service.clone(), &state.camera_config) {
+    let camera = match Camera::new(
+        0,
+        state.prediction_service.clone(),
+        &state.camera_config,
+        state.metrics,
+    ) {
         Ok(cam) => cam,
         Err(e) => {
             tracing::error!("Could not create camera: {:?}", e);

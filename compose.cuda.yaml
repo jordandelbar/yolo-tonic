@@ -1,3 +1,6 @@
+include:
+  - base.yaml
+
 services:
   webcam_capture_app:
     image: ghcr.io/jordandelbar/yolo-tonic/webcam-capture:latest
@@ -10,9 +13,10 @@ services:
     devices:
       - /dev/video0:/dev/video0
     depends_on:
-      - yolo_prediction_service
+      yolo_prediction_service:
+        condition: service_healthy
     networks:
-      - yolo_tonic_network_cuda
+      - yolo_tonic_network
 
   yolo_prediction_service:
     image: ghcr.io/jordandelbar/yolo-tonic/yolo-prediction-cuda:latest
@@ -34,8 +38,13 @@ services:
               count: all
               capabilities: [gpu]
     networks:
-      - yolo_tonic_network_cuda
+      - yolo_tonic_network
+
+  prometheus:
+    extends:
+      file: base.yaml
+      service: prometheus
 
 networks:
   yolo_tonic_network_cuda:
-    name: yolo_tonic_network_cuda
+    name: yolo_tonic_network

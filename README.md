@@ -28,13 +28,24 @@ make all
 This will download the necessary images, runs the service and automatically
 open a webpage for visualization.
 
-## ⚡ Running with CUDA support
+## ⚡ Running with CUDA and TensorRT support
 
 If you have [set up CUDA correctly](docs/setup/nvidia_docker.md), you can run the project with GPU acceleration by executing:
 
 ```sh
 make all-cuda
 ```
+
+## ⏱️ Performances
+![Alt text](./docs/images/performances.png)
+
+The system is designed for real-time processing using parallel inference sessions to maximize throughput.
+
+* **TensorRT**: The time taken to generate predictions for a single frame is typically around **42ms** (median) and **90ms** (99th percentile). This means the detections you see correspond to the video frame from approximately 42/90ms prior.
+
+* **CPU**: The time taken to generate predictions for a single frame is typically around **250ms** (median) and **450ms** (99th percentile). This means the detections you see correspond to the video frame from approximately 250/450ms prior.
+
+This, of course, depends on the hardware you run and the results obtained here are on a RTX2060 with 8gb of VRAM for the TensorRT part and an Intel® Core™ i5-9600K × 6 for the CPU part.
 
 ## 🐧 OS Compatibility
 

@@ -1,3 +1,6 @@
+include:
+  - base.yaml
+
 services:
   webcam_capture_app:
     build:
@@ -30,6 +33,16 @@ services:
       YP_MODEL__MIN_PROBABILITY: 0.55
     networks:
       - yolo_tonic_network
+
+  prometheus:
+    extends:
+      file: base.yaml
+      service: prometheus
+
+  grafana:
+    extends:
+      file: base.yaml
+      service: grafana
 
 networks:
   yolo_tonic_network:

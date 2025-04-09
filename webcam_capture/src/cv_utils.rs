@@ -22,26 +22,33 @@ impl From<opencv::Error> for CvUtilsError {
     }
 }
 
-pub struct ImageConverter;
+pub struct CvImage {
+    pub mat: Mat,
+}
 
-impl ImageConverter {
-    pub fn bytes_to_mat(bytes: Bytes) -> Result<Mat, CvUtilsError> {
-        let mat = imgcodecs::imdecode(&Vector::from_slice(&bytes), imgcodecs::IMREAD_COLOR)
-            .map_err(CvUtilsError::OpenCvDecodeError)?;
-        Ok(mat)
+impl CvImage {
+    pub fn new() -> Self {
+        let mat = Mat::default();
+        Self { mat }
     }
 
-    pub fn encode_mat_to_jpg(mat: &Mat) -> Result<Vec<u8>, CvUtilsError> {
+    pub fn from_bytes(bytes: Bytes) -> Result<Self, CvUtilsError> {
+        let mat = imgcodecs::imdecode(&Vector::from_slice(&bytes), imgcodecs::IMREAD_COLOR)
+            .map_err(CvUtilsError::OpenCvDecodeError)?;
+        Ok(Self { mat })
+    }
+
+    pub fn to_jpg(&self) -> Result<Vec<u8>, CvUtilsError> {
         let mut buf = Vector::<u8>::new();
-        imgcodecs::imencode(".jpg", mat, &mut buf, &Vector::new())
+        imgcodecs::imencode(".jpg", &self.mat, &mut buf, &Vector::new())
             .map_err(CvUtilsError::EncodeFrameFailed)?;
         Ok(buf.into())
     }
 
-    pub fn annotate_frame(
-        frame: &mut Mat,
+    pub fn annotate(
+        &mut self,
         bboxes: &[BoundingBoxWithLabels],
-    ) -> Result<(), CvUtilsError> {
+    ) -> Result<&mut Self, CvUtilsError> {
         for bbox in bboxes {
             let x1 = bbox.x1 as i32;
             let y1 = bbox.y1 as i32;
@@ -52,7 +59,7 @@ impl ImageConverter {
             let color = Scalar::new(bbox.blue as f64, bbox.green as f64, bbox.red as f64, 0.0);
 
             imgproc::rectangle(
-                frame,
+                &mut self.mat,
                 Rect::new(x1, y1, x2 - x1, y2 - y1),
                 color,
                 2,
@@ -62,7 +69,7 @@ impl ImageConverter {
             .map_err(CvUtilsError::from)?;
 
             imgproc::put_text(
-                frame,
+                &mut self.mat,
                 &label,
                 Point::new(x1, y1 - 5),
                 imgproc::FONT_HERSHEY_SIMPLEX,
@@ -74,6 +81,6 @@ impl ImageConverter {
             )
             .map_err(CvUtilsError::from)?;
         }
-        Ok(())
+        Ok(self)
     }
 }
