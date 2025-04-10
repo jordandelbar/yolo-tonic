@@ -35,6 +35,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Clean up Docker resources
+        run: |
+          docker system prune -af
+          docker buildx prune -af
+        continue-on-error: true
+
       - name: Install uv
         uses: astral-sh/setup-uv@v5
 
