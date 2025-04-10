@@ -46,5 +46,5 @@ services:
       service: prometheus
 
 networks:
-  yolo_tonic_network_cuda:
+  yolo_tonic_network:
     name: yolo_tonic_network
