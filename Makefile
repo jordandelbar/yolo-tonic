@@ -71,4 +71,4 @@ local-services-cuda-down:
 	@docker compose -f compose.cuda.local.yaml down
 
 all: services-up open-webpage
-all-cuda: services-up-cuda open-webpage
+all-cuda: services-cuda-up open-webpage
