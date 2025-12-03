@@ -85,7 +85,10 @@ impl OrtModelService {
         })
     }
 
-    pub fn run_inference(&self, input: &Array<f32, Ix4>) -> Result<ndarray::ArrayD<f32>, Status> {
+    pub fn run_inference(
+        &self,
+        input: &Array<f32, Ix4>,
+    ) -> Result<ndarray::ArrayD<f32>, Box<Status>> {
         let index = self.counter.fetch_add(1, Ordering::SeqCst) % self.sessions.len();
         let session_arc = &self.sessions[index];
         let mut session = session_arc
@@ -139,7 +142,7 @@ impl ModelService for OrtModelService {
         let outputs_array = self.run_inference(&input);
         let outputs = match outputs_array {
             Ok(outputs) => outputs,
-            Err(err) => return Err(err),
+            Err(err) => return Err(*err),
         };
 
         let mut boxes = Vec::new();
@@ -178,7 +181,7 @@ impl ModelService for OrtModelService {
         let mut result = Vec::new();
 
         while !boxes.is_empty() {
-            result.push(boxes[0].clone());
+            result.push(boxes[0]);
             boxes = boxes
                 .iter()
                 .filter(|box1| intersection(&boxes[0], box1) / union(&boxes[0], box1) < 0.7)
