@@ -18,7 +18,7 @@ panic = "abort"
 
 [dependencies]
 yolo_proto = { path = "../yolo_proto" }
-ort = { version = "2.0.0-rc.9", features = ["ndarray", "tensorrt"] }
+ort = { version = "2.0.0-rc.10", features = ["ndarray", "tensorrt"] }
 tonic = "0.13"
 tonic-reflection = "0.13"
 tonic-health = "0.13"
