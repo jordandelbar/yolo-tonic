@@ -18,7 +18,7 @@ panic = "abort"
 
 [dependencies]
 yolo_proto = { path = "../yolo_proto" }
-tokio = { version = "1", features = ["full"] }
+tokio = { version = "1.48", features = ["full"] }
 tokio-stream = { version = "0.1", features = ["sync"] }
 rand = "0.9"
 axum = { version = "0.8", features = ["ws", "tokio"] }
@@ -30,7 +30,7 @@ tonic = "0.13"
 config = { version = "0.15", default-features = false, features = ["yaml"] }
 serde = { version = "1", features = ["derive"] }
 tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["json", "env-filter"] }
+tracing-subscriber = { version = "0.3.22", features = ["json", "env-filter"] }
 thiserror = "2"
 axum-otel-metrics = { version = "0.10" }
 opentelemetry = { version = "0.29", features = ["metrics"] }
