@@ -30,6 +30,20 @@ impl<M: ModelService, S: State> YoloService for InferenceService<M, S> {
         let model_service = self.model_service.clone();
         let batch = model_service.predict(image_frame).await?;
 
+        tracing::debug!("Returning {} detections", batch.detections.len());
+        for (i, detection) in batch.detections.iter().enumerate() {
+            tracing::debug!(
+                "Detection {}: class_id={}, confidence={:.3}, bbox=({:.1}, {:.1}, {:.1}, {:.1})",
+                i,
+                detection.class_id,
+                detection.confidence,
+                detection.x1,
+                detection.y1,
+                detection.x2,
+                detection.y2
+            );
+        }
+
         Ok(Response::new(batch))
     }
 

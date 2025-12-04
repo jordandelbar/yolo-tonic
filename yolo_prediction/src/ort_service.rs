@@ -146,7 +146,13 @@ impl ModelService for OrtModelService {
         };
 
         let mut boxes = Vec::new();
-        let output = outputs.slice(s![.., .., 0]);
+        let output = outputs.slice(s![0, .., ..]).t().to_owned();
+
+        tracing::debug!(
+            "Output shape: {:?}, min_probability: {}",
+            output.shape(),
+            self.min_probability
+        );
 
         for row in output.axis_iter(Axis(0)) {
             let row: Vec<_> = row.iter().copied().collect();
@@ -159,8 +165,15 @@ impl ModelService for OrtModelService {
                 .unwrap();
 
             if prob < self.min_probability {
+                tracing::trace!(
+                    "Skipping detection with prob {} < {}",
+                    prob,
+                    self.min_probability
+                );
                 continue;
             }
+
+            tracing::debug!("Found detection: class_id={}, prob={}", class_id, prob);
 
             let xc = row[0] / 640. * (img_width as f32);
             let yc = row[1] / 640. * (img_height as f32);
@@ -176,6 +189,8 @@ impl ModelService for OrtModelService {
                 y2: yc + h / 2.,
             });
         }
+
+        tracing::debug!("Found {} boxes before NMS", boxes.len());
 
         boxes.sort_by(|box1, box2| box2.confidence.total_cmp(&box1.confidence));
         let mut result = Vec::new();
