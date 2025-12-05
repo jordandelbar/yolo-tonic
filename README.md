@@ -54,13 +54,10 @@ If you are using a different video input, you may need to modify the source code
 
 ## 📄 License
 
-This project utilizes the YOLOv8m model, which is distributed under the AGPL-3.0 license.
-Please refer to the [Ultralytics website for the full license details](https://www.ultralytics.com/license).
+This project (the code in this repository) is licensed under the GNU AGPLv3, because it bundles and uses the YOLOv8m model, which is distributed under the AGPL-3.0 license.
+Please refer to the [Ultralytics website for the YOLOv8m license](https://www.ultralytics.com/license).
 
-This project is intended for educational and demonstration purposes.
-Its licensing is subject to the licensing terms of the YOLOv8m model.
-
-Disclaimer: Users are responsible for ensuring their compliance with the YOLOv8m model's license.
+This project is intended for educational and demonstration purposes. Users are responsible for ensuring compliance with the YOLOv8m model's license.
 
 <!--references-->
 [ONNX]: https://onnx.ai/
