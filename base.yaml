@@ -3,11 +3,11 @@ services:
     image: otel/opentelemetry-collector-contrib:0.115.1
     command: ["--config=/etc/otel-collector-config.yml"]
     volumes:
-      - ./otel-collector-config.yml:/etc/otel-collector-config.yml
+      - ./monitoring/telemetry/otel/otel-collector-config.yml:/etc/otel-collector-config.yml
     ports:
-      - "4317:4317"   # OTLP gRPC receiver
-      - "4318:4318"   # OTLP HTTP receiver
-      - "8889:8889"   # Prometheus exporter
+      - "4317:4317" # OTLP gRPC receiver
+      - "4318:4318" # OTLP HTTP receiver
+      - "8889:8889" # Prometheus exporter
     networks:
       - yolo_tonic_network
 
@@ -16,7 +16,7 @@ services:
     ports:
       - "9090:9090"
     volumes:
-      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./monitoring/telemetry/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
     depends_on:
       - otel-collector
     networks:
@@ -38,7 +38,7 @@ services:
       PROMETHEUS_HOST: prometheus
       PROMETHEUS_PORT: 9090
     volumes:
-      - ./grafana/provisioning:/etc/grafana/provisioning
-      - ./grafana/monitoring_dashboards:/var/lib/grafana/monitoring_dashboards
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+      - ./monitoring/grafana/monitoring_dashboards:/var/lib/grafana/monitoring_dashboards
     networks:
       - yolo_tonic_network
