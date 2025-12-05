@@ -5,4 +5,4 @@ scrape_configs:
   - job_name: "webcam_capture_app"
     metrics_path: "/metrics"
     static_configs:
-      - targets: ["webcam_capture_app:8000"]
+      - targets: ["otel-collector:8889"]

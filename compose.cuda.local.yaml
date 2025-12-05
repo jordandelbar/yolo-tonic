@@ -12,11 +12,14 @@ services:
       APP_ENVIRONMENT: "production"
       WC_CAMERA__STREAM_FPS: 60
       WC_CAMERA__PREDICTION_FPS: 60
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
     devices:
       - /dev/video0:/dev/video0
     depends_on:
       yolo_prediction_service:
         condition: service_healthy
+      otel-collector:
+        condition: service_started
     networks:
       - yolo_tonic_network
 
@@ -43,6 +46,11 @@ services:
               capabilities: [gpu]
     networks:
       - yolo_tonic_network
+
+  otel-collector:
+    extends:
+      file: base.yaml
+      service: otel-collector
 
   prometheus:
     extends:
