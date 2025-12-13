@@ -1,12 +1,12 @@
 .PHONY: download-model local-run-server \
 		local-run-client local-services-build \
-		local-services-up local-services-cuda-build \
-		local-services-cuda-up \
-		services-up services-cuda-up \
+		local-services-up local-services-trt-build \
+		local-services-trt-up \
+		services-up services-trt-up \
 	 	open-webpage open-grafana predict-image \
-		grpc-ui services-down services-cuda-down \
-		local-services-down local-services-cuda-down \
-		all cuda-all
+		grpc-ui services-down services-trt-down \
+		local-services-down local-services-trt-down \
+		all trt-all
 
 # For local use
 download-model:
@@ -26,18 +26,18 @@ local-services-build:
 local-services-up:
 	@docker compose -f compose.local.yaml up -d
 
-local-services-cuda-build:
-	@docker compose -f compose.cuda.local.yaml build
+local-services-trt-build:
+	@docker compose -f compose.trt.local.yaml build
 
-local-services-cuda-up:
-	@docker compose -f compose.cuda.local.yaml up -d
+local-services-trt-up:
+	@docker compose -f compose.trt.local.yaml up -d
 
 # For external use
 services-up:
 	@docker compose -f compose.yaml up -d
 
-services-cuda-up:
-	@docker compose -f compose.cuda.yaml up -d
+services-trt-up:
+	@docker compose -f compose.trt.yaml up -d
 
 open-webpage:
 	@if command -v xdg-open > /dev/null; then xdg-open index.html; \
@@ -61,14 +61,14 @@ grpc-ui:
 services-down:
 	@docker compose -f compose.yaml down
 
-services-cuda-down:
+services-trt-down:
 	@docker compose -f compose.yaml down
 
 local-services-down:
 	@docker compose -f compose.local.yaml down
 
-local-services-cuda-down:
-	@docker compose -f compose.cuda.local.yaml down
+local-services-trt-down:
+	@docker compose -f compose.trt.local.yaml down
 
 all: services-up open-webpage
-all-cuda: services-cuda-up open-webpage
+all-trt: services-trt-up open-webpage

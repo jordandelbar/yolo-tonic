@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        service: [webcam_capture, yolo_prediction, yolo_prediction_cuda]
+        service: [webcam_capture, yolo_prediction, yolo_prediction_trt]
         include:
           - service: webcam_capture
             dockerfile: webcam_capture/Dockerfile
@@ -27,9 +27,9 @@ jobs:
           - service: yolo_prediction
             dockerfile: yolo_prediction/Dockerfile
             tag: yolo-prediction
-          - service: yolo_prediction_cuda
-            dockerfile: yolo_prediction/cuda.Dockerfile
-            tag: yolo-prediction-cuda
+          - service: yolo_prediction_trt
+            dockerfile: yolo_prediction/trt.Dockerfile
+            tag: yolo-prediction-trt
 
     steps:
       - name: Checkout code
@@ -64,7 +64,7 @@ jobs:
             yolo-model-${{ runner.os }}-
 
       - name: Download YOLO Model if missing
-        if: matrix.service == 'yolo_prediction' || matrix.service == 'yolo_prediction_cuda'
+        if: matrix.service == 'yolo_prediction' || matrix.service == 'yolo_prediction_trt'
         run: |
           if [ ! -f "./yolo_prediction/models/yolov8m.onnx" ]; then
             make download-model

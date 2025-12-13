@@ -6,11 +6,12 @@ use image::{imageops::FilterType, GenericImageView};
 use ndarray::{s, Array, Axis, Ix4};
 use ort::{
     execution_providers::TensorRTExecutionProvider,
-    session::{builder::GraphOptimizationLevel, Session, SessionOutputs},
+    session::{builder::GraphOptimizationLevel, Session},
+    value::TensorRef,
 };
 use std::sync::{
     atomic::{AtomicUsize, Ordering},
-    Arc,
+    Arc, Mutex,
 };
 use tonic::{async_trait, Status};
 use yolo_proto::{BoundingBox, ImageFrame, PredictionBatch};
@@ -53,7 +54,7 @@ fn transform_image_frame(image_frame: &ImageFrame) -> Result<(Array<f32, Ix4>, u
 
 #[derive(Clone)]
 pub struct OrtModelService {
-    sessions: Arc<Vec<Arc<Session>>>,
+    sessions: Arc<Vec<Arc<Mutex<Session>>>>,
     counter: Arc<AtomicUsize>,
     min_probability: f32,
 }
@@ -71,7 +72,7 @@ impl OrtModelService {
                 let session = Session::builder()?
                     .with_optimization_level(GraphOptimizationLevel::Level3)?
                     .commit_from_file(model_config.get_path())?;
-                Ok(Arc::new(session))
+                Ok(Arc::new(Mutex::new(session)))
             })
             .collect::<Result<Vec<_>, ort::Error>>()?;
 
@@ -84,20 +85,43 @@ impl OrtModelService {
         })
     }
 
-    pub fn run_inference(&self, input: &Array<f32, Ix4>) -> Result<SessionOutputs, Status> {
+    pub fn run_inference(
+        &self,
+        input: &Array<f32, Ix4>,
+    ) -> Result<ndarray::ArrayD<f32>, Box<Status>> {
         let index = self.counter.fetch_add(1, Ordering::SeqCst) % self.sessions.len();
-        let session = &self.sessions[index];
+        let session_arc = &self.sessions[index];
+        let mut session = session_arc
+            .lock()
+            .map_err(|e| Status::internal(format!("session mutex poisoned: {}", e)))?;
 
         tracing::debug!("Handling request with session {}", index);
+        let owned_buffer;
+        let input_view = if input.view().is_standard_layout() {
+            input.view()
+        } else {
+            owned_buffer = input.to_owned();
+            owned_buffer.view()
+        };
 
-        let input_tensor = ort::inputs![input.view()]
-            .map_err(|e| Status::internal(format!("failed to create input tensor: {}", e)))?;
+        let tensor_ref = TensorRef::from_array_view(input_view)
+            .map_err(|e| Status::internal(format!("failed to build tensor: {}", e)))?;
 
-        let output = session
+        let input_tensor = ort::inputs![tensor_ref];
+
+        let outputs = session
             .run(input_tensor)
             .map_err(|e| Status::internal(format!("inference failed: {}", e)))?;
 
-        Ok(output)
+        let (shape, data) = outputs["output0"]
+            .try_extract_tensor::<f32>()
+            .map_err(|e| Status::internal(format!("failed to extract tensor: {}", e)))?;
+
+        let ix = shape.to_ixdyn();
+        let array = ndarray::ArrayD::from_shape_vec(ix, data.to_vec())
+            .map_err(|e| Status::internal(format!("invalid tensor shape: {}", e)))?;
+
+        Ok(array)
     }
 }
 
@@ -115,20 +139,20 @@ impl ModelService for OrtModelService {
             }
         };
 
-        let outputs_result = self.run_inference(&input);
-        let outputs = match outputs_result {
+        let outputs_array = self.run_inference(&input);
+        let outputs = match outputs_array {
             Ok(outputs) => outputs,
-            Err(err) => return Err(err),
+            Err(err) => return Err(*err),
         };
 
-        let output = outputs["output0"]
-            .try_extract_tensor::<f32>()
-            .unwrap()
-            .t()
-            .into_owned();
-
         let mut boxes = Vec::new();
-        let output = output.slice(s![.., .., 0]);
+        let output = outputs.slice(s![0, .., ..]).t().to_owned();
+
+        tracing::debug!(
+            "Output shape: {:?}, min_probability: {}",
+            output.shape(),
+            self.min_probability
+        );
 
         for row in output.axis_iter(Axis(0)) {
             let row: Vec<_> = row.iter().copied().collect();
@@ -141,8 +165,15 @@ impl ModelService for OrtModelService {
                 .unwrap();
 
             if prob < self.min_probability {
+                tracing::trace!(
+                    "Skipping detection with prob {} < {}",
+                    prob,
+                    self.min_probability
+                );
                 continue;
             }
+
+            tracing::debug!("Found detection: class_id={}, prob={}", class_id, prob);
 
             let xc = row[0] / 640. * (img_width as f32);
             let yc = row[1] / 640. * (img_height as f32);
@@ -159,11 +190,13 @@ impl ModelService for OrtModelService {
             });
         }
 
+        tracing::debug!("Found {} boxes before NMS", boxes.len());
+
         boxes.sort_by(|box1, box2| box2.confidence.total_cmp(&box1.confidence));
         let mut result = Vec::new();
 
         while !boxes.is_empty() {
-            result.push(boxes[0].clone());
+            result.push(boxes[0]);
             boxes = boxes
                 .iter()
                 .filter(|box1| intersection(&boxes[0], box1) / union(&boxes[0], box1) < 0.7)

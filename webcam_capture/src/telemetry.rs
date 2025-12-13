@@ -3,7 +3,6 @@ use opentelemetry::{
     metrics::{Counter, Gauge, Histogram, MeterProvider},
     KeyValue,
 };
-use prometheus::Registry;
 use std::collections::HashSet;
 
 pub struct Metrics {
@@ -11,20 +10,24 @@ pub struct Metrics {
     prediction_duration: Histogram<u64>,
     camera_fps: Gauge<f64>,
     prediction_fps: Gauge<f64>,
-    pub registry: Registry,
 }
 
 impl Metrics {
     pub fn new() -> Self {
-        let registry = Registry::new();
-        // TODO: deprecated crate to be replaced with an OLTP exporter
-        let exporter = opentelemetry_prometheus::exporter()
-            .with_registry(registry.clone())
+        // Configure OTLP exporter to push metrics to collector
+        // Uses OTEL_EXPORTER_OTLP_ENDPOINT environment variable
+        // Default: http://localhost:4317
+        let exporter = opentelemetry_otlp::MetricExporter::builder()
+            .with_tonic()
             .build()
-            .unwrap();
+            .expect("failed to create OTLP metric exporter");
+
+        let reader = opentelemetry_sdk::metrics::PeriodicReader::builder(exporter)
+            .with_interval(std::time::Duration::from_secs(5))
+            .build();
 
         let provider = opentelemetry_sdk::metrics::SdkMeterProvider::builder()
-            .with_reader(exporter)
+            .with_reader(reader)
             .build();
 
         let meter = provider.meter("webcam_capture");
@@ -58,7 +61,6 @@ impl Metrics {
             prediction_duration,
             camera_fps,
             prediction_fps,
-            registry,
         }
     }
 

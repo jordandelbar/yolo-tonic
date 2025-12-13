@@ -6,7 +6,7 @@ RUN apt-get update -y \
     && apt-get install -y --no-install-recommends protobuf-compiler libprotobuf-dev
 
 # Download and extract ONNX Runtime
-RUN curl -L -o onnxruntime.tgz "https://github.com/microsoft/onnxruntime/releases/download/v1.20.0/onnxruntime-linux-x64-1.20.0.tgz" \
+RUN curl -L -o onnxruntime.tgz "https://github.com/microsoft/onnxruntime/releases/download/v1.23.2/onnxruntime-linux-x64-gpu-1.23.2.tgz" \
     && mkdir /app/onnxruntime \
     && tar -xzf onnxruntime.tgz --strip-components=1 -C /app/onnxruntime \
     && rm onnxruntime.tgz
