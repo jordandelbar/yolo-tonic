@@ -3,7 +3,9 @@ include:
 
 services:
   webcam_capture_app:
-    image: ghcr.io/jordandelbar/yolo-tonic/webcam-capture:latest
+    build:
+      context: .
+      dockerfile: ./webcam_capture/Dockerfile
     ports:
       - "8000:8000"
     environment:
@@ -22,7 +24,9 @@ services:
       - yolo_tonic_network
 
   yolo_prediction_service:
-    image: ghcr.io/jordandelbar/yolo-tonic/yolo-prediction-cuda:latest
+    build:
+      context: .
+      dockerfile: ./yolo_prediction/trt.Dockerfile
     ports:
       - "50051:50051"
     environment:
@@ -52,6 +56,11 @@ services:
     extends:
       file: base.yaml
       service: prometheus
+
+  grafana:
+    extends:
+      file: base.yaml
+      service: grafana
 
 networks:
   yolo_tonic_network:

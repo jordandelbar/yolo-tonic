@@ -33,7 +33,7 @@ open a webpage for visualization.
 If you have [set up CUDA correctly](docs/setup/nvidia_docker.md), you can run the project with GPU acceleration by executing:
 
 ```sh
-make all-cuda
+make all-trt
 ```
 
 ## ⏱️ Performances
@@ -41,15 +41,15 @@ make all-cuda
 
 The system is designed for real-time processing using parallel inference sessions to maximize throughput.
 
-* **TensorRT**: The time taken to generate predictions for a single frame is typically around **42ms** (median) and **90ms** (99th percentile). This means the detections you see correspond to the video frame from approximately 42/90ms prior.
+* **TensorRT**: The time taken to generate predictions for a single frame is typically around **30ms** (median) and **35ms** (99th percentile) with sometimes peaks at **80ms** during rapid camera motion. This means the detections you see correspond to the video frame from approximately 35ms prior.
 
-* **CPU**: The time taken to generate predictions for a single frame is typically around **250ms** (median) and **450ms** (99th percentile). This means the detections you see correspond to the video frame from approximately 250/450ms prior.
+* **CPU**: The time taken to generate predictions for a single frame is typically around **72ms** (median) and **112ms** (99th percentile) with peaks at **140ms**. This means the detections you see correspond to the video frame from approximately 112ms prior.
 
-This, of course, depends on the hardware you run and the results obtained here are on a RTX2060 with 8gb of VRAM for the TensorRT part and an Intel® Core™ i5-9600K × 6 for the CPU part.
+This, of course, depends on the hardware you run and the results obtained here are on a RTX2060 with 8gb of VRAM and an AMD Ryzen 7 9800x3D.
 
 ## 🐧 OS Compatibility
 
-Currently, the project only works on Linux as it relies on mounting the `/dev/video1` device.
+Currently, the project only works on Linux as it relies on mounting the `/dev/video0` device.
 If you are using a different video input, you may need to modify the source code accordingly.
 
 ## 📄 License
