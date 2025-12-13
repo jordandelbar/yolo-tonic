@@ -25,7 +25,6 @@ axum = { version = "0.8", features = ["ws", "tokio"] }
 opencv = "0.94"
 futures = "0.3"
 anyhow = "1"
-bytes = "1"
 tonic = "0.13"
 config = { version = "0.15", default-features = false, features = ["yaml"] }
 serde = { version = "1", features = ["derive"] }
@@ -36,4 +35,3 @@ axum-otel-metrics = { version = "0.10" }
 opentelemetry = { version = "0.31", features = ["metrics"] }
 opentelemetry-otlp = { version = "0.31", features = ["metrics", "grpc-tonic"] }
 opentelemetry_sdk = { version = "0.31", features = ["rt-tokio", "metrics"] }
-parking_lot = "0.12"
