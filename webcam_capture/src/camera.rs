@@ -42,7 +42,6 @@ pub struct Camera {
     prediction_delay: u64,
     fps_camera_frame_count: Arc<AtomicUsize>,
     fps_prediction_frame_count: Arc<AtomicUsize>,
-    fps_start_time: Arc<Mutex<Instant>>,
     metrics: Arc<Metrics>,
 }
 
@@ -76,7 +75,6 @@ impl Camera {
             prediction_delay,
             fps_camera_frame_count: Arc::new(AtomicUsize::new(0)),
             fps_prediction_frame_count: Arc::new(AtomicUsize::new(0)),
-            fps_start_time: Arc::new(Mutex::new(Instant::now())),
             metrics,
         })
     }
@@ -103,7 +101,6 @@ impl Camera {
         let metrics = self.metrics.clone();
         let fps_camera_frame_count = self.fps_camera_frame_count.clone();
         let fps_prediction_frame_count = self.fps_prediction_frame_count.clone();
-        let fps_start_time = self.fps_start_time.clone();
 
         let frame_thread = tokio::spawn(async move {
             let mut camera =
@@ -182,18 +179,15 @@ impl Camera {
         let _ = tokio::spawn(async move {
             loop {
                 sleep(Duration::from_secs(1)).await;
-                let now = Instant::now();
                 let camera_count = fps_camera_frame_count.swap(0, Ordering::AcqRel);
                 let prediction_count = fps_prediction_frame_count.swap(0, Ordering::AcqRel);
-                let mut start = fps_start_time.lock().await;
-                let elapsed = now.duration_since(*start).as_secs_f64();
-                if elapsed > 0.0 {
-                    let camera_fps = camera_count as f64 / elapsed;
-                    let prediction_fps = prediction_count as f64 / elapsed;
-                    metrics.record_camera_fps(camera_fps, "camera");
-                    metrics.record_prediction_fps(prediction_fps, "camera");
-                }
-                *start = Instant::now();
+
+                // Since we sleep exactly 1 second, count equals FPS
+                let camera_fps = camera_count as f64;
+                let prediction_fps = prediction_count as f64;
+
+                metrics.record_camera_fps(camera_fps, "camera");
+                metrics.record_prediction_fps(prediction_fps, "camera");
             }
         });
 
