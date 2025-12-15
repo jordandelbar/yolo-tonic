@@ -9,7 +9,7 @@ services:
     environment:
       APP_ENVIRONMENT: "production"
       WC_CAMERA__STREAM_FPS: 30
-      WC_CAMERA__PREDICTION_FPS: 20
+      WC_CAMERA__PREDICTION_FPS: 15
       OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
     devices:
       - /dev/video0:/dev/video0

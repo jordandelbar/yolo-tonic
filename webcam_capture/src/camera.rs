@@ -5,7 +5,7 @@ use crate::{
     prediction::PredictionService,
     telemetry::Metrics,
 };
-use opencv::{core::Mat, prelude::*};
+use opencv::prelude::*;
 use std::sync::{
     atomic::{AtomicBool, AtomicUsize, Ordering},
     Arc,
@@ -34,7 +34,7 @@ pub struct Camera {
     device_id: i32,
     running: Arc<AtomicBool>,
     prediction_running: Arc<AtomicBool>,
-    raw_frame_sender: broadcast::Sender<Arc<Mat>>,
+    raw_frame_sender: broadcast::Sender<Vec<u8>>,
     frame_sender: broadcast::Sender<Vec<u8>>,
     prediction_service: Arc<PredictionService>,
     predictions_lock: Arc<Mutex<Vec<BoundingBoxWithLabels>>>,
@@ -108,10 +108,14 @@ impl Camera {
                     .map_err(CameraError::OpenCamera)?;
 
             while camera_running.load(Ordering::Relaxed) {
+                let cycle_start = Instant::now();
+
                 let mut image = CvImage::new();
                 if camera.read(&mut image.mat).unwrap_or(false) {
-                    if raw_frame_sender.send(Arc::new(image.mat.clone())).is_err() {
-                        tracing::warn!("No prediction receiver listening for raw frames.");
+                    if let Ok(jpeg_data) = image.to_jpg() {
+                        if raw_frame_sender.send(jpeg_data).is_err() {
+                            tracing::warn!("No prediction receiver listening for raw frames.");
+                        }
                     }
 
                     match process_frame(image, &predictions_lock1).await {
@@ -128,7 +132,13 @@ impl Camera {
                         }
                     }
                 }
-                sleep(Duration::from_millis(stream_delay)).await;
+
+                let elapsed = cycle_start.elapsed();
+                let target_delay = Duration::from_millis(stream_delay);
+                let sleep_time = target_delay
+                    .checked_sub(elapsed)
+                    .unwrap_or(Duration::from_millis(1));
+                sleep(sleep_time).await;
             }
             drop(camera);
 
@@ -139,24 +149,10 @@ impl Camera {
         let mut raw_rx = raw_frame_sender_clone.subscribe();
         let prediction_thread = tokio::spawn(async move {
             while prediction_running.load(Ordering::Relaxed) {
-                match raw_rx.recv().await {
-                    Ok(mat_arc) => {
-                        let frame_data = {
-                            let cv_image = CvImage {
-                                mat: (*mat_arc).clone(),
-                            };
-                            match cv_image.to_jpg() {
-                                Ok(data) => data,
-                                Err(e) => {
-                                    tracing::error!(
-                                        "Failed to encode frame for prediction: {:?}",
-                                        e
-                                    );
-                                    continue;
-                                }
-                            }
-                        };
+                let cycle_start = Instant::now();
 
+                match raw_rx.recv().await {
+                    Ok(frame_data) => {
                         let start = Instant::now();
                         match prediction_service.predict(frame_data).await {
                             Ok(predictions) => {
@@ -183,7 +179,13 @@ impl Camera {
                     }
                     Err(_) => break,
                 }
-                sleep(Duration::from_millis(prediction_delay)).await;
+
+                let elapsed = cycle_start.elapsed();
+                let target_delay = Duration::from_millis(prediction_delay);
+                let sleep_time = target_delay
+                    .checked_sub(elapsed)
+                    .unwrap_or(Duration::from_millis(2));
+                sleep(sleep_time).await;
             }
             Ok(())
         });
