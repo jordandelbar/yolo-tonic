@@ -5,7 +5,7 @@ use crate::{
     prediction::PredictionService,
     telemetry::Metrics,
 };
-use opencv::prelude::*;
+use opencv::{core::Mat, prelude::*};
 use std::sync::{
     atomic::{AtomicBool, AtomicUsize, Ordering},
     Arc,
@@ -34,7 +34,7 @@ pub struct Camera {
     device_id: i32,
     running: Arc<AtomicBool>,
     prediction_running: Arc<AtomicBool>,
-    raw_frame_sender: broadcast::Sender<Vec<u8>>,
+    raw_frame_sender: broadcast::Sender<Arc<Mat>>,
     frame_sender: broadcast::Sender<Vec<u8>>,
     prediction_service: Arc<PredictionService>,
     predictions_lock: Arc<Mutex<Vec<BoundingBoxWithLabels>>>,
@@ -110,7 +110,7 @@ impl Camera {
             while camera_running.load(Ordering::Relaxed) {
                 let mut image = CvImage::new();
                 if camera.read(&mut image.mat).unwrap_or(false) {
-                    if raw_frame_sender.send(image.to_jpg().unwrap()).is_err() {
+                    if raw_frame_sender.send(Arc::new(image.mat.clone())).is_err() {
                         tracing::warn!("No prediction receiver listening for raw frames.");
                     }
 
@@ -140,7 +140,23 @@ impl Camera {
         let prediction_thread = tokio::spawn(async move {
             while prediction_running.load(Ordering::Relaxed) {
                 match raw_rx.recv().await {
-                    Ok(frame_data) => {
+                    Ok(mat_arc) => {
+                        let frame_data = {
+                            let cv_image = CvImage {
+                                mat: (*mat_arc).clone(),
+                            };
+                            match cv_image.to_jpg() {
+                                Ok(data) => data,
+                                Err(e) => {
+                                    tracing::error!(
+                                        "Failed to encode frame for prediction: {:?}",
+                                        e
+                                    );
+                                    continue;
+                                }
+                            }
+                        };
+
                         let start = Instant::now();
                         match prediction_service.predict(frame_data).await {
                             Ok(predictions) => {
@@ -182,7 +198,6 @@ impl Camera {
                 let camera_count = fps_camera_frame_count.swap(0, Ordering::AcqRel);
                 let prediction_count = fps_prediction_frame_count.swap(0, Ordering::AcqRel);
 
-                // Since we sleep exactly 1 second, count equals FPS
                 let camera_fps = camera_count as f64;
                 let prediction_fps = prediction_count as f64;
 
