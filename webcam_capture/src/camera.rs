@@ -108,10 +108,14 @@ impl Camera {
                     .map_err(CameraError::OpenCamera)?;
 
             while camera_running.load(Ordering::Relaxed) {
+                let cycle_start = Instant::now();
+
                 let mut image = CvImage::new();
                 if camera.read(&mut image.mat).unwrap_or(false) {
-                    if raw_frame_sender.send(image.to_jpg().unwrap()).is_err() {
-                        tracing::warn!("No prediction receiver listening for raw frames.");
+                    if let Ok(jpeg_data) = image.to_jpg() {
+                        if raw_frame_sender.send(jpeg_data).is_err() {
+                            tracing::warn!("No prediction receiver listening for raw frames.");
+                        }
                     }
 
                     match process_frame(image, &predictions_lock1).await {
@@ -128,7 +132,13 @@ impl Camera {
                         }
                     }
                 }
-                sleep(Duration::from_millis(stream_delay)).await;
+
+                let elapsed = cycle_start.elapsed();
+                let target_delay = Duration::from_millis(stream_delay);
+                let sleep_time = target_delay
+                    .checked_sub(elapsed)
+                    .unwrap_or(Duration::from_millis(1));
+                sleep(sleep_time).await;
             }
             drop(camera);
 
@@ -139,6 +149,8 @@ impl Camera {
         let mut raw_rx = raw_frame_sender_clone.subscribe();
         let prediction_thread = tokio::spawn(async move {
             while prediction_running.load(Ordering::Relaxed) {
+                let cycle_start = Instant::now();
+
                 match raw_rx.recv().await {
                     Ok(frame_data) => {
                         let start = Instant::now();
@@ -167,7 +179,13 @@ impl Camera {
                     }
                     Err(_) => break,
                 }
-                sleep(Duration::from_millis(prediction_delay)).await;
+
+                let elapsed = cycle_start.elapsed();
+                let target_delay = Duration::from_millis(prediction_delay);
+                let sleep_time = target_delay
+                    .checked_sub(elapsed)
+                    .unwrap_or(Duration::from_millis(2));
+                sleep(sleep_time).await;
             }
             Ok(())
         });
@@ -182,7 +200,6 @@ impl Camera {
                 let camera_count = fps_camera_frame_count.swap(0, Ordering::AcqRel);
                 let prediction_count = fps_prediction_frame_count.swap(0, Ordering::AcqRel);
 
-                // Since we sleep exactly 1 second, count equals FPS
                 let camera_fps = camera_count as f64;
                 let prediction_fps = prediction_count as f64;
 

@@ -40,7 +40,8 @@ impl CvImage {
 
     pub fn to_jpg(&self) -> Result<Vec<u8>, CvUtilsError> {
         let mut buf = Vector::<u8>::new();
-        imgcodecs::imencode(".jpg", &self.mat, &mut buf, &Vector::new())
+        let params = Vector::from_slice(&[imgcodecs::IMWRITE_JPEG_QUALITY, 75]);
+        imgcodecs::imencode(".jpg", &self.mat, &mut buf, &params)
             .map_err(CvUtilsError::EncodeFrameFailed)?;
         Ok(buf.into())
     }

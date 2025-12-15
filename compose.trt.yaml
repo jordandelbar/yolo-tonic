@@ -9,7 +9,7 @@ services:
     environment:
       APP_ENVIRONMENT: "production"
       WC_CAMERA__STREAM_FPS: 30
-      WC_CAMERA__PREDICTION_FPS: 30
+      WC_CAMERA__PREDICTION_FPS: 20
       WC_PREDICTION_SERVICE__HOST: "yolo_prediction_service_trt"
       OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
     devices:
