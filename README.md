@@ -41,7 +41,7 @@ make all-trt
 
 The system is designed for real-time processing using parallel inference sessions to maximize throughput.
 
-* **TensorRT**: The time taken to generate predictions for a single frame is typically around **30ms** (median) and **35ms** (99th percentile) with sometimes peaks at **80ms** during rapid camera motion. This means the detections you see correspond to the video frame from approximately 35ms prior.
+* **TensorRT**: The time taken to generate predictions for a single frame is typically around **40ms** (median) and **45ms** (99th percentile). This means the detections you see correspond to the video frame from approximately 40-45ms prior.
 
 * **CPU**: The time taken to generate predictions for a single frame is typically around **72ms** (median) and **112ms** (99th percentile) with peaks at **140ms**. This means the detections you see correspond to the video frame from approximately 112ms prior.
 
