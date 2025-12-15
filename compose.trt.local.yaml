@@ -10,20 +10,21 @@ services:
       - "8000:8000"
     environment:
       APP_ENVIRONMENT: "production"
-      WC_CAMERA__STREAM_FPS: 60
-      WC_CAMERA__PREDICTION_FPS: 60
+      WC_CAMERA__STREAM_FPS: 30
+      WC_CAMERA__PREDICTION_FPS: 30
+      WC_PREDICTION_SERVICE__HOST: "yolo_prediction_service_trt"
       OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
     devices:
       - /dev/video0:/dev/video0
     depends_on:
-      yolo_prediction_service:
+      yolo_prediction_service_trt:
         condition: service_healthy
       otel-collector:
         condition: service_started
     networks:
       - yolo_tonic_network
 
-  yolo_prediction_service:
+  yolo_prediction_service_trt:
     build:
       context: .
       dockerfile: ./yolo_prediction/trt.Dockerfile

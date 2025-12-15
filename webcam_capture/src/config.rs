@@ -50,7 +50,7 @@ pub struct CameraConfig {
 }
 
 fn default_stream_fps() -> u64 {
-    60
+    30
 }
 
 fn default_prediction_fps() -> u64 {
