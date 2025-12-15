@@ -22,16 +22,16 @@ tokio = { version = "1.48", features = ["full"] }
 tokio-stream = { version = "0.1", features = ["sync"] }
 rand = "0.9"
 axum = { version = "0.8", features = ["ws", "tokio"] }
-opencv = "0.94"
+opencv = "0.97"
 futures = "0.3"
 anyhow = "1"
-tonic = "0.13"
+tonic = "0.14"
 config = { version = "0.15", default-features = false, features = ["yaml"] }
 serde = { version = "1", features = ["derive"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3.22", features = ["json", "env-filter"] }
 thiserror = "2"
-axum-otel-metrics = { version = "0.10" }
+axum-otel-metrics = { version = "0.12" }
 opentelemetry = { version = "0.31", features = ["metrics"] }
 opentelemetry-otlp = { version = "0.31", features = ["metrics", "grpc-tonic"] }
 opentelemetry_sdk = { version = "0.31", features = ["rt-tokio", "metrics"] }
