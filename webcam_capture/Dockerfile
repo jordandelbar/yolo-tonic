@@ -1,4 +1,4 @@
-FROM rust:1.85.0 AS builder
+FROM rust:1.92.0 AS builder
 
 WORKDIR /app
 
@@ -11,12 +11,16 @@ COPY ./yolo_proto /app/yolo_proto
 WORKDIR /app/webcam_capture
 RUN cargo build --release
 
-FROM debian:bookworm-slim
+FROM debian:trixie-slim
 
 WORKDIR /app
 
 RUN apt-get update -y \
-    && apt-get install -y --no-install-recommends protobuf-compiler libprotobuf-dev libgomp1 libopencv-dev \
+    && apt-get install -y --no-install-recommends \
+        protobuf-compiler \
+        libprotobuf-dev \
+        libgomp1 \
+        libopencv-dev \
     && apt-get autoremove -y \
     && apt-get clean -y \
     && rm -rf /var/lib/apt/lists/*

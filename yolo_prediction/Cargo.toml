@@ -22,11 +22,12 @@ warn = ["all", "pedantic"]
 [dependencies]
 yolo_proto = { path = "../yolo_proto" }
 ort = { version = "2.0.0-rc.10", features = ["ndarray", "tensorrt"] }
-tonic = "0.13"
-tonic-reflection = "0.13"
-tonic-health = "0.13"
+tonic = "0.14"
+tonic-reflection = "0.14"
+tonic-health = "0.14"
 tokio = { version = "1.48", features = ["full"] }
-image = "0.25.9"
+image = { version = "0.25.9", default-features = false, features = ["jpeg", "png", "webp"] }
+zune-jpeg = "=0.5.6"
 ndarray = "0.16"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3.22", features = ["json", "env-filter"] }
